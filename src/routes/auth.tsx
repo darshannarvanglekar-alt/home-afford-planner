@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/auth")({
@@ -72,11 +73,16 @@ function AuthPage() {
 
   const handleOAuth = async (provider: "google" | "apple") => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo: `${window.location.origin}/dashboard` },
+      const result = await lovable.auth.signInWithOAuth(provider, {
+        redirect_uri: `${window.location.origin}/dashboard`,
       });
-      if (error) throw error;
+      if (result.error) {
+        const message = result.error instanceof Error ? result.error.message : "Sign-in failed.";
+        toast.error(message);
+        return;
+      }
+      if (result.redirected) return;
+      navigate({ to: "/dashboard" });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Sign-in failed.";
       toast.error(message);
