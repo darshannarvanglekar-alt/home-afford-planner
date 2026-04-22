@@ -75,6 +75,7 @@ function AuthPage() {
     try {
       const result = await lovable.auth.signInWithOAuth(provider, {
         redirect_uri: `${window.location.origin}/dashboard`,
+        ...(provider === "google" ? { extraParams: { prompt: "select_account" } } : {}),
       });
       if (result.error) {
         const message = result.error instanceof Error ? result.error.message : "Sign-in failed.";
