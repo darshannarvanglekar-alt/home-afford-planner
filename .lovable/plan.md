@@ -1,74 +1,39 @@
 
-# HomeAfford — Landing, Auth, Dashboard
+# Verify Google OAuth on the published site
 
-Build the foundation of HomeAfford: a clean, trustworthy, mobile-first marketing site with auth and a logged-in dashboard shell.
+Your Google SSO code is already correctly wired:
+- `auth.tsx` calls `lovable.auth.signInWithOAuth("google", { redirect_uri: ${origin}/dashboard })`
+- The Lovable managed Google OAuth requires **no secret setup**
+- On success, the user lands on `/dashboard`, which is protected by `useAuth` and shows the dashboard once the session is set
 
-## Design system
-- **Font:** Inter (loaded via Google Fonts in root)
-- **Primary:** Indigo `#4F46E5` set as `--primary` in design tokens
-- **Style:** White background, soft shadows, rounded-xl cards, smooth hover transitions, subtle indigo accents. Professional, not flashy.
-- **Responsive:** Mobile-first; navbar collapses to hamburger on small screens; hero/features/steps stack vertically on mobile.
+The `missing OAuth secret` 400 error you saw is almost always an environment-specific backend config issue in the **preview environment** — not your application code. Per Lovable's known guidance, OAuth in the preview Cloud Dev environment can fail even when production works perfectly.
 
-## Routes
+## Recommended verification path
 
-### `/` — Landing page
-Single route file with these stacked sections:
-1. **Navbar** — "HomeAfford" logo (indigo, bold) left; "Sign In" (outline) + "Start Free" (filled indigo) right. Mobile: hamburger.
-2. **Hero** — Pill badge "AI-Powered · India's First Home Affordability Planner", large headline, subheadline, two CTAs (Start Planning / See How It Works), privacy trust line below.
-3. **Features** — 3 cards (Cash Flow, Builder Payment, Verdict) with emoji icons, soft shadow, hover lift.
-4. **Why HomeAfford** — Heading + 4 checkmark rows.
-5. **How It Works** — 3 numbered steps with indigo numbered circles, connecting line on desktop.
-6. **Final CTA** — Indigo background block, white heading, white button with indigo text.
-7. **Footer** — Logo + tagline, links (Privacy / Terms / Contact), copyright with India flag.
+1. **Publish the project** (Publish button, top-right of Lovable).
+2. Open the **published URL** (`https://...lovable.app`).
+3. Click **Continue with Google** on `/auth`.
+4. Confirm you land on `/dashboard` and see your greeting.
 
-Per-route SEO metadata via `head()`.
+## Expected outcomes
 
-### `/auth` — Sign in / Sign up
-- Centered card on a soft gradient background, logo at top, heading + subheading.
-- **Email + password** form (toggle between Sign In / Sign Up) — primary path with proper error handling and `emailRedirectTo` set to `${window.location.origin}/dashboard`.
-- Divider "or continue with".
-- Two SSO buttons full-width with brand icons: **Google** and **Apple** (Microsoft omitted — not supported by Lovable Cloud auth; we'll add it if Supabase Integration is connected later).
-- Privacy reassurance line at bottom.
-- Redirects to `/dashboard` on success; if already signed in, redirects away from `/auth`.
+- **Works on published site** → the code and managed Google OAuth are fully functional. Preview-only failures are an environment issue and require no code changes. You can keep developing in preview and use the published URL whenever you need to test the Google flow end-to-end.
+- **Fails on published site too** → then there's a real config problem and we'll dig into the Cloud Auth Settings together (open the Lovable Cloud dashboard → Users → Auth Settings → Google).
 
-### `/dashboard` — Protected dashboard
-- Guarded via TanStack Router `_authenticated` layout: checks Supabase session in `beforeLoad`, redirects to `/auth` if missing.
-- **Top navbar:** logo left; right side avatar + first name with dropdown (Profile placeholder, Sign Out).
-- **Greeting:** Time-aware "Good morning/afternoon/evening, [First Name] 👋" + subtext.
-- **"Start a New Plan" card:** Large, indigo-accented, 🏠 icon, description, "Start New Plan" button (non-functional placeholder for next phase).
-- **"My Saved Plans"** section: Queries the `plans` table (will be empty), shows empty-state illustration + message.
+## What I will NOT change
 
-## Backend (Lovable Cloud)
+Per Lovable's stack guidance, I will not:
+- Modify the OAuth `redirect_uri` or callback URL
+- Switch from `lovable.auth.signInWithOAuth` to a direct Supabase client call (managed OAuth requires the lovable wrapper)
+- Add CORS headers or alter fetch behavior
+- Reconfigure the providers table or RLS
 
-Enable Lovable Cloud and configure:
+These would all break the working managed-OAuth flow.
 
-**Auth providers**
-- Email + password (enabled, no email confirmation for smoother first-run)
-- Google OAuth (enabled)
-- Apple OAuth (enabled)
-- Leaked password protection (HIBP) enabled
+## If you want a code-level change anyway
 
-**Database — `profiles` table**
-- `id uuid PK` references `auth.users(id)` on delete cascade
-- `first_name text`, `last_name text`, `avatar_url text`, `email text`
-- `created_at`, `updated_at` timestamps
-- RLS: users can select/update only their own row
-- Trigger `handle_new_user` on `auth.users` insert: auto-creates a profile row, populating first name + avatar from SSO metadata when present
+The only reasonable code change would be to **also pass `prompt: "select_account"`** to the Google call, so users with multiple Google accounts always see the picker instead of being silently signed in with the most recent one. This is a UX nicety, not a fix. Let me know if you'd like that added.
 
-**Database — `plans` table** (scaffold for next phase)
-- `id uuid PK default gen_random_uuid()`
-- `user_id uuid not null references auth.users(id) on delete cascade`
-- `name text not null` (e.g. "3BHK in Whitefield")
-- `status text` (draft / complete)
-- `verdict text` (safe / stretch / risky / null)
-- `data jsonb` (flexible bag for property cost, loan, payment plan, etc.)
-- `created_at`, `updated_at`
-- RLS: full CRUD restricted to `user_id = auth.uid()`
-- Index on `user_id`
+## Action for you
 
-## Out of scope (next phases)
-- Bank statement upload + parsing
-- Plan creation wizard (income, expenses, property, loan, builder schedule)
-- Month-by-month cash flow engine and verdict logic
-- Profile editing page
-
+Click **Publish** and test the Google button on the published URL. Reply with the result and — if it still fails there — paste the exact error message and I'll investigate the live auth logs.
