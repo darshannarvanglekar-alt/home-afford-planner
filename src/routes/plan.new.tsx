@@ -189,6 +189,8 @@ function PlanWizardPage() {
           <Step1Finances value={finances} onChange={setFinances} />
         ) : step === 2 ? (
           <Step2Home value={home} onChange={setHome} />
+        ) : step === 3 ? (
+          <Step3Profile value={profile} onChange={setProfile} />
         ) : (
           <ComingSoon step={step} />
         )}
