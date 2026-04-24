@@ -131,3 +131,51 @@ export function totalOutflow(f: Finances): number {
 export function surplus(f: Finances): number {
   return totalIncome(f) - totalOutflow(f);
 }
+
+export const EMPLOYMENT_TYPES = [
+  "salaried_private",
+  "salaried_government",
+  "self_employed",
+  "freelance",
+] as const;
+export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
+
+export const INCOME_STABILITY = ["very_stable", "mostly_stable", "variable"] as const;
+export type IncomeStability = (typeof INCOME_STABILITY)[number];
+
+export const EMERGENCY_FUND_PREFS = ["conservative", "balanced", "aggressive"] as const;
+export type EmergencyFundPref = (typeof EMERGENCY_FUND_PREFS)[number];
+
+export const profileSchema = z.object({
+  dependents: z.number().int().min(0).max(6).default(0),
+  elderlyParents: z.boolean().default(false),
+  soleEarner: z.boolean().default(false),
+  healthInsurance: z.boolean().default(true),
+  termInsurance: z.boolean().default(false),
+  hasUpcomingExpense: z.boolean().default(false),
+  upcomingExpenseAmount: num,
+  upcomingExpenseMonth: z.number().int().min(1).max(24).default(1),
+  emergencyFundPref: z.enum(EMERGENCY_FUND_PREFS).default("balanced"),
+  employmentType: z.enum(EMPLOYMENT_TYPES).default("salaried_private"),
+  incomeStability: z.enum(INCOME_STABILITY).default("very_stable"),
+});
+export type Profile = z.infer<typeof profileSchema>;
+
+export const defaultProfile: Profile = {
+  dependents: 0,
+  elderlyParents: false,
+  soleEarner: false,
+  healthInsurance: true,
+  termInsurance: false,
+  hasUpcomingExpense: false,
+  upcomingExpenseAmount: 0,
+  upcomingExpenseMonth: 1,
+  emergencyFundPref: "balanced",
+  employmentType: "salaried_private",
+  incomeStability: "very_stable",
+};
+
+export function recommendEmergencyFund(p: Profile): EmergencyFundPref {
+  if (p.elderlyParents || p.soleEarner || !p.healthInsurance) return "conservative";
+  return "balanced";
+}
