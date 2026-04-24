@@ -191,7 +191,7 @@ function DashboardPage() {
               <Button
                 size="lg"
                 className="w-full sm:w-auto"
-                onClick={() => toast.info("The plan wizard is coming soon.")}
+                onClick={() => navigate({ to: "/plan/new", search: { step: 1 } })}
               >
                 <Plus className="h-4 w-4" />
                 Start New Plan
