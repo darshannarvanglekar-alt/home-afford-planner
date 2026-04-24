@@ -139,7 +139,7 @@ function PlanWizardPage() {
     saveTimer.current = setTimeout(async () => {
       const { error } = await supabase
         .from("plans")
-        .update({ data: { finances, home } })
+        .update({ data: { finances, home, profile } })
         .eq("id", planId);
       if (error) {
         setSaveState("idle");
@@ -153,7 +153,7 @@ function PlanWizardPage() {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [finances, home, planId, planReady]);
+  }, [finances, home, profile, planId, planReady]);
 
   if (authLoading || !session || !planId) {
     return (
