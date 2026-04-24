@@ -226,6 +226,7 @@ function PlanWizardPage() {
             <Button
               size="lg"
               disabled={!canGoNext}
+              className={step === 3 ? "h-12 px-8 text-base font-semibold" : undefined}
               onClick={() =>
                 navigate({
                   to: "/plan/new",
@@ -237,7 +238,7 @@ function PlanWizardPage() {
                 ? "Next: Your Home"
                 : step === 2
                   ? "Next: Your Profile"
-                  : "Next: Your Plan"}
+                  : "Calculate My Plan"}
               <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
