@@ -212,7 +212,7 @@ function PlanWizardPage() {
           {step < 4 ? (
             <Button
               size="lg"
-              disabled={step === 1 && !canGoNext}
+              disabled={!canGoNext}
               onClick={() =>
                 navigate({
                   to: "/plan/new",
