@@ -73,10 +73,11 @@ function PlanWizardPage() {
           return;
         }
 
-        const parsed = financesSchema.safeParse(
-          (data.data as { finances?: unknown })?.finances,
-        );
-        if (parsed.success) setFinances(parsed.data);
+        const blob = (data.data ?? {}) as { finances?: unknown; home?: unknown };
+        const parsedF = financesSchema.safeParse(blob.finances);
+        if (parsedF.success) setFinances(parsedF.data);
+        const parsedH = homeSchema.safeParse(blob.home);
+        if (parsedH.success) setHome(parsedH.data);
         setPlanReady(true);
       } else {
         const { data, error } = await supabase
