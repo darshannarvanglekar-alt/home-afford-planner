@@ -152,7 +152,12 @@ function PlanWizardPage() {
     );
   }
 
-  const canGoNext = finances.income.primarySalary > 0;
+  const canGoNext =
+    step === 1
+      ? finances.income.primarySalary > 0
+      : step === 2
+        ? home.propertyCost > 0
+        : true;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
