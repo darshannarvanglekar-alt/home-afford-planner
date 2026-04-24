@@ -41,6 +41,7 @@ function PlanWizardPage() {
   const { step, planId } = Route.useSearch();
 
   const [finances, setFinances] = React.useState<Finances>(defaultFinances);
+  const [home, setHome] = React.useState<Home>(defaultHome);
   const [planReady, setPlanReady] = React.useState(false);
   const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved">("idle");
 
