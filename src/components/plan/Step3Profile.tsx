@@ -342,8 +342,8 @@ function WarningCard({
   text: string;
 }) {
   return (
-    <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-foreground">
-      <span className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400">{icon}</span>
+    <div className="mt-3 flex items-start gap-2 rounded-xl border border-warning/40 bg-warning/15 px-4 py-3 text-sm text-foreground">
+      <span className="mt-0.5 shrink-0 text-warning">{icon}</span>
       <span className="leading-relaxed">{text}</span>
     </div>
   );
