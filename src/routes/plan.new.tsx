@@ -176,6 +176,8 @@ function PlanWizardPage() {
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         {step === 1 ? (
           <Step1Finances value={finances} onChange={setFinances} />
+        ) : step === 2 ? (
+          <Step2Home value={home} onChange={setHome} />
         ) : (
           <ComingSoon step={step} />
         )}
