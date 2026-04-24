@@ -7,12 +7,16 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { WizardProgress } from "@/components/plan/WizardProgress";
 import { Step1Finances } from "@/components/plan/Step1Finances";
+import { Step2Home } from "@/components/plan/Step2Home";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   defaultFinances,
+  defaultHome,
   financesSchema,
+  homeSchema,
   type Finances,
+  type Home,
 } from "@/lib/plan-schema";
 
 const searchSchema = z.object({
