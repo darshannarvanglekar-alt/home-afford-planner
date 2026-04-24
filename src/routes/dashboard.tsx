@@ -191,7 +191,7 @@ function DashboardPage() {
               <Button
                 size="lg"
                 className="w-full sm:w-auto"
-                onClick={() => navigate({ to: "/plan/new", search: { step: 1 } })}
+                onClick={() => navigate({ to: "/plan/new", search: { step: 1, planId: undefined } })}
               >
                 <Plus className="h-4 w-4" />
                 Start New Plan

@@ -2,6 +2,64 @@ import { z } from "zod";
 
 const num = z.number().min(0).default(0);
 
+export const PROPERTY_TYPES = ["ready", "construction", "plot"] as const;
+export type PropertyType = (typeof PROPERTY_TYPES)[number];
+
+export const builderStageSchema = z.object({
+  id: z.string(),
+  name: z.string().default(""),
+  month: z.number().int().min(1).default(1),
+  bankPays: num,
+  youPay: num,
+});
+export type BuilderStage = z.infer<typeof builderStageSchema>;
+
+export const homeSchema = z.object({
+  propertyType: z.enum(PROPERTY_TYPES).default("ready"),
+  propertyCost: num,
+  downPayment: num,
+  city: z.string().default(""),
+  interestRateA: z.number().min(0).max(50).default(8.5),
+  interestRateB: z.number().min(0).max(50).optional(),
+  tenureYears: z.number().int().min(1).max(40).default(20),
+  builderStages: z.array(builderStageSchema).default([]),
+  registrationStampDuty: num,
+  interiorBudget: num,
+  possessionMonth: z.number().int().min(1).max(60).default(1),
+});
+export type Home = z.infer<typeof homeSchema>;
+
+export const defaultHome: Home = {
+  propertyType: "ready",
+  propertyCost: 0,
+  downPayment: 0,
+  city: "",
+  interestRateA: 8.5,
+  interestRateB: undefined,
+  tenureYears: 20,
+  builderStages: [
+    { id: "s1", name: "Stage 1", month: 1, bankPays: 0, youPay: 0 },
+    { id: "s2", name: "Stage 2", month: 13, bankPays: 0, youPay: 0 },
+  ],
+  registrationStampDuty: 0,
+  interiorBudget: 0,
+  possessionMonth: 1,
+};
+
+export function loanAmount(h: Home): number {
+  return Math.max(0, (h.propertyCost || 0) - (h.downPayment || 0));
+}
+
+export function calcEMI(principal: number, annualRatePct: number, tenureYears: number): number {
+  if (!principal || principal <= 0) return 0;
+  if (!tenureYears || tenureYears <= 0) return 0;
+  const n = tenureYears * 12;
+  const r = annualRatePct / 12 / 100;
+  if (r === 0) return principal / n;
+  const pow = Math.pow(1 + r, n);
+  return (principal * r * pow) / (pow - 1);
+}
+
 export const financesSchema = z.object({
   income: z.object({
     primarySalary: num,

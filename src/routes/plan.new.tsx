@@ -7,12 +7,16 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { WizardProgress } from "@/components/plan/WizardProgress";
 import { Step1Finances } from "@/components/plan/Step1Finances";
+import { Step2Home } from "@/components/plan/Step2Home";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   defaultFinances,
+  defaultHome,
   financesSchema,
+  homeSchema,
   type Finances,
+  type Home,
 } from "@/lib/plan-schema";
 
 const searchSchema = z.object({
@@ -37,6 +41,7 @@ function PlanWizardPage() {
   const { step, planId } = Route.useSearch();
 
   const [finances, setFinances] = React.useState<Finances>(defaultFinances);
+  const [home, setHome] = React.useState<Home>(defaultHome);
   const [planReady, setPlanReady] = React.useState(false);
   const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved">("idle");
 
@@ -68,10 +73,11 @@ function PlanWizardPage() {
           return;
         }
 
-        const parsed = financesSchema.safeParse(
-          (data.data as { finances?: unknown })?.finances,
-        );
-        if (parsed.success) setFinances(parsed.data);
+        const blob = (data.data ?? {}) as { finances?: unknown; home?: unknown };
+        const parsedF = financesSchema.safeParse(blob.finances);
+        if (parsedF.success) setFinances(parsedF.data);
+        const parsedH = homeSchema.safeParse(blob.home);
+        if (parsedH.success) setHome(parsedH.data);
         setPlanReady(true);
       } else {
         const { data, error } = await supabase
@@ -122,7 +128,7 @@ function PlanWizardPage() {
     saveTimer.current = setTimeout(async () => {
       const { error } = await supabase
         .from("plans")
-        .update({ data: { finances } })
+        .update({ data: { finances, home } })
         .eq("id", planId);
       if (error) {
         setSaveState("idle");
@@ -136,7 +142,7 @@ function PlanWizardPage() {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [finances, planId, planReady]);
+  }, [finances, home, planId, planReady]);
 
   if (authLoading || !session || !planId) {
     return (
@@ -146,7 +152,12 @@ function PlanWizardPage() {
     );
   }
 
-  const canGoNext = finances.income.primarySalary > 0;
+  const canGoNext =
+    step === 1
+      ? finances.income.primarySalary > 0
+      : step === 2
+        ? home.propertyCost > 0
+        : true;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -165,6 +176,8 @@ function PlanWizardPage() {
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         {step === 1 ? (
           <Step1Finances value={finances} onChange={setFinances} />
+        ) : step === 2 ? (
+          <Step2Home value={home} onChange={setHome} />
         ) : (
           <ComingSoon step={step} />
         )}
@@ -199,7 +212,7 @@ function PlanWizardPage() {
           {step < 4 ? (
             <Button
               size="lg"
-              disabled={step === 1 && !canGoNext}
+              disabled={!canGoNext}
               onClick={() =>
                 navigate({
                   to: "/plan/new",
