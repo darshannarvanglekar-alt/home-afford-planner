@@ -8,15 +8,19 @@ import { Button } from "@/components/ui/button";
 import { WizardProgress } from "@/components/plan/WizardProgress";
 import { Step1Finances } from "@/components/plan/Step1Finances";
 import { Step2Home } from "@/components/plan/Step2Home";
+import { Step3Profile } from "@/components/plan/Step3Profile";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   defaultFinances,
   defaultHome,
+  defaultProfile,
   financesSchema,
   homeSchema,
+  profileSchema,
   type Finances,
   type Home,
+  type Profile,
 } from "@/lib/plan-schema";
 
 const searchSchema = z.object({
