@@ -46,6 +46,7 @@ function PlanWizardPage() {
 
   const [finances, setFinances] = React.useState<Finances>(defaultFinances);
   const [home, setHome] = React.useState<Home>(defaultHome);
+  const [profile, setProfile] = React.useState<Profile>(defaultProfile);
   const [planReady, setPlanReady] = React.useState(false);
   const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved">("idle");
 
