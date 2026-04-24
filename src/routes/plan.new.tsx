@@ -8,15 +8,19 @@ import { Button } from "@/components/ui/button";
 import { WizardProgress } from "@/components/plan/WizardProgress";
 import { Step1Finances } from "@/components/plan/Step1Finances";
 import { Step2Home } from "@/components/plan/Step2Home";
+import { Step3Profile } from "@/components/plan/Step3Profile";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   defaultFinances,
   defaultHome,
+  defaultProfile,
   financesSchema,
   homeSchema,
+  profileSchema,
   type Finances,
   type Home,
+  type Profile,
 } from "@/lib/plan-schema";
 
 const searchSchema = z.object({
@@ -42,6 +46,7 @@ function PlanWizardPage() {
 
   const [finances, setFinances] = React.useState<Finances>(defaultFinances);
   const [home, setHome] = React.useState<Home>(defaultHome);
+  const [profile, setProfile] = React.useState<Profile>(defaultProfile);
   const [planReady, setPlanReady] = React.useState(false);
   const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved">("idle");
 
@@ -73,11 +78,17 @@ function PlanWizardPage() {
           return;
         }
 
-        const blob = (data.data ?? {}) as { finances?: unknown; home?: unknown };
+        const blob = (data.data ?? {}) as {
+          finances?: unknown;
+          home?: unknown;
+          profile?: unknown;
+        };
         const parsedF = financesSchema.safeParse(blob.finances);
         if (parsedF.success) setFinances(parsedF.data);
         const parsedH = homeSchema.safeParse(blob.home);
         if (parsedH.success) setHome(parsedH.data);
+        const parsedP = profileSchema.safeParse(blob.profile);
+        if (parsedP.success) setProfile(parsedP.data);
         setPlanReady(true);
       } else {
         const { data, error } = await supabase
@@ -128,7 +139,7 @@ function PlanWizardPage() {
     saveTimer.current = setTimeout(async () => {
       const { error } = await supabase
         .from("plans")
-        .update({ data: { finances, home } })
+        .update({ data: { finances, home, profile } })
         .eq("id", planId);
       if (error) {
         setSaveState("idle");
@@ -142,7 +153,7 @@ function PlanWizardPage() {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [finances, home, planId, planReady]);
+  }, [finances, home, profile, planId, planReady]);
 
   if (authLoading || !session || !planId) {
     return (
@@ -178,6 +189,8 @@ function PlanWizardPage() {
           <Step1Finances value={finances} onChange={setFinances} />
         ) : step === 2 ? (
           <Step2Home value={home} onChange={setHome} />
+        ) : step === 3 ? (
+          <Step3Profile value={profile} onChange={setProfile} />
         ) : (
           <ComingSoon step={step} />
         )}
@@ -213,6 +226,7 @@ function PlanWizardPage() {
             <Button
               size="lg"
               disabled={!canGoNext}
+              className={step === 3 ? "h-12 px-8 text-base font-semibold" : undefined}
               onClick={() =>
                 navigate({
                   to: "/plan/new",
@@ -224,7 +238,7 @@ function PlanWizardPage() {
                 ? "Next: Your Home"
                 : step === 2
                   ? "Next: Your Profile"
-                  : "Next: Your Plan"}
+                  : "Calculate My Plan"}
               <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
