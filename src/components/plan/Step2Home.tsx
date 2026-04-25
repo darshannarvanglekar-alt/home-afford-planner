@@ -50,6 +50,13 @@ const TENURE_OPTIONS = [5, 10, 15, 20, 25, 30];
 const POSSESSION_MONTHS = Array.from({ length: 60 }, (_, i) => i + 1);
 
 export function Step2Home({ value, onChange }: Props) {
+  const [scheduleFile, setScheduleFile] = React.useState<File | null>(null);
+  const [extracting, setExtracting] = React.useState(false);
+  const [extractMessage, setExtractMessage] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [aiStageIds, setAiStageIds] = React.useState<Set<string>>(new Set());
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
+
   const set = <K extends keyof Home>(k: K, v: Home[K]) =>
     onChange({ ...value, [k]: v });
 
@@ -91,6 +98,78 @@ export function Step2Home({ value, onChange }: Props) {
       ...value,
       builderStages: value.builderStages.filter((s) => s.id !== id),
     });
+  };
+
+  const validateScheduleFile = (file: File) => {
+    const ok = file.type === "application/pdf" || file.type === "image/jpeg" || file.type === "image/png" || /\.(pdf|jpg|jpeg|png)$/i.test(file.name);
+    if (!ok) {
+      setExtractMessage({ type: "error", text: "Please upload a PDF, JPG or PNG file only." });
+      return false;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setExtractMessage({ type: "error", text: "File too large. Please upload under 10MB or take a photo instead." });
+      return false;
+    }
+    return true;
+  };
+
+  const chooseScheduleFile = (file?: File) => {
+    if (!file) return;
+    setExtractMessage(null);
+    if (validateScheduleFile(file)) setScheduleFile(file);
+  };
+
+  const extractPaymentPlan = async () => {
+    if (!scheduleFile) return;
+    setExtracting(true);
+    setExtractMessage(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Please sign in before extracting a payment plan.");
+
+      const form = new FormData();
+      form.append("file", scheduleFile);
+      form.append("propertyCost", String(value.propertyCost || 0));
+
+      const res = await fetch("/api/extract-builder-payment-plan", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      const data = await res.json() as { stages?: ExtractedStage[]; propertyCost?: number; error?: string };
+      if (!res.ok || !data.stages?.length) {
+        throw new Error(data.error || "We couldn't find a payment schedule in this document. Please enter the stages manually below.");
+      }
+
+      const stages = data.stages.map((stage, index) => ({
+        id: `ai-${Date.now()}-${index}`,
+        name: stage.stageName || `Stage ${index + 1}`,
+        month: Math.max(1, Math.round(stage.month || index + 1)),
+        bankPays: Math.round(stage.bankAmount || 0),
+        youPay: Math.round(stage.selfAmount || Math.max(0, (stage.totalAmount || 0) - (stage.bankAmount || 0))),
+      }));
+      onChange({
+        ...value,
+        propertyCost: value.propertyCost || Math.round(data.propertyCost || 0),
+        builderStages: stages,
+      });
+      setAiStageIds(new Set(stages.map((s) => s.id)));
+      setExtractMessage({
+        type: "success",
+        text: `✅ Found ${stages.length} payment stages. Please review and edit if anything looks wrong. ✅ Document deleted after analysis.`,
+      });
+      setScheduleFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+    } catch (error) {
+      setExtractMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "The image quality is too low to read. Please try a clearer photo or upload the PDF directly.",
+      });
+    } finally {
+      setExtracting(false);
+    }
   };
 
   const totalBank = value.builderStages.reduce((a, s) => a + (s.bankPays || 0), 0);
