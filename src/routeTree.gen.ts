@@ -13,6 +13,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlanNewRouteImport } from './routes/plan.new'
+import { Route as ApiGeneratePlanSuggestionsRouteImport } from './routes/api.generate-plan-suggestions'
 import { Route as ApiExtractBuilderPaymentPlanRouteImport } from './routes/api.extract-builder-payment-plan'
 import { Route as ApiAnalyzeBankStatementRouteImport } from './routes/api.analyze-bank-statement'
 
@@ -36,6 +37,12 @@ const PlanNewRoute = PlanNewRouteImport.update({
   path: '/plan/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGeneratePlanSuggestionsRoute =
+  ApiGeneratePlanSuggestionsRouteImport.update({
+    id: '/api/generate-plan-suggestions',
+    path: '/api/generate-plan-suggestions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiExtractBuilderPaymentPlanRoute =
   ApiExtractBuilderPaymentPlanRouteImport.update({
     id: '/api/extract-builder-payment-plan',
@@ -54,6 +61,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
   '/api/extract-builder-payment-plan': typeof ApiExtractBuilderPaymentPlanRoute
+  '/api/generate-plan-suggestions': typeof ApiGeneratePlanSuggestionsRoute
   '/plan/new': typeof PlanNewRoute
 }
 export interface FileRoutesByTo {
@@ -62,6 +70,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
   '/api/extract-builder-payment-plan': typeof ApiExtractBuilderPaymentPlanRoute
+  '/api/generate-plan-suggestions': typeof ApiGeneratePlanSuggestionsRoute
   '/plan/new': typeof PlanNewRoute
 }
 export interface FileRoutesById {
@@ -71,6 +80,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
   '/api/extract-builder-payment-plan': typeof ApiExtractBuilderPaymentPlanRoute
+  '/api/generate-plan-suggestions': typeof ApiGeneratePlanSuggestionsRoute
   '/plan/new': typeof PlanNewRoute
 }
 export interface FileRouteTypes {
@@ -81,6 +91,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/api/analyze-bank-statement'
     | '/api/extract-builder-payment-plan'
+    | '/api/generate-plan-suggestions'
     | '/plan/new'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -89,6 +100,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/api/analyze-bank-statement'
     | '/api/extract-builder-payment-plan'
+    | '/api/generate-plan-suggestions'
     | '/plan/new'
   id:
     | '__root__'
@@ -97,6 +109,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/api/analyze-bank-statement'
     | '/api/extract-builder-payment-plan'
+    | '/api/generate-plan-suggestions'
     | '/plan/new'
   fileRoutesById: FileRoutesById
 }
@@ -106,6 +119,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   ApiAnalyzeBankStatementRoute: typeof ApiAnalyzeBankStatementRoute
   ApiExtractBuilderPaymentPlanRoute: typeof ApiExtractBuilderPaymentPlanRoute
+  ApiGeneratePlanSuggestionsRoute: typeof ApiGeneratePlanSuggestionsRoute
   PlanNewRoute: typeof PlanNewRoute
 }
 
@@ -139,6 +153,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlanNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/generate-plan-suggestions': {
+      id: '/api/generate-plan-suggestions'
+      path: '/api/generate-plan-suggestions'
+      fullPath: '/api/generate-plan-suggestions'
+      preLoaderRoute: typeof ApiGeneratePlanSuggestionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/extract-builder-payment-plan': {
       id: '/api/extract-builder-payment-plan'
       path: '/api/extract-builder-payment-plan'
@@ -162,6 +183,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   ApiAnalyzeBankStatementRoute: ApiAnalyzeBankStatementRoute,
   ApiExtractBuilderPaymentPlanRoute: ApiExtractBuilderPaymentPlanRoute,
+  ApiGeneratePlanSuggestionsRoute: ApiGeneratePlanSuggestionsRoute,
   PlanNewRoute: PlanNewRoute,
 }
 export const routeTree = rootRouteImport
