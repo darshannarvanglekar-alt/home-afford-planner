@@ -359,6 +359,95 @@ export function Step2Home({ value, onChange }: Props) {
             </p>
           </div>
 
+          <div className="rounded-2xl border border-border bg-background p-4 shadow-soft sm:p-5">
+            <h3 className="text-lg font-bold text-foreground">Upload your builder payment schedule</h3>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Have a payment plan PDF or image from your builder? Upload it and AI will fill the stage table automatically.
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+              className="hidden"
+              onChange={(e) => chooseScheduleFile(e.target.files?.[0])}
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => chooseScheduleFile(e.target.files?.[0])}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={(e) => {
+                e.preventDefault();
+                chooseScheduleFile(e.dataTransfer.files?.[0]);
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              className="mt-4 flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/35 px-4 py-8 text-center transition hover:border-primary/50 hover:bg-primary-soft/40"
+            >
+              <Upload className="h-8 w-8 text-primary" />
+              <span className="mt-3 text-sm font-semibold text-foreground">
+                📄 Drop builder payment schedule here or click to upload
+              </span>
+              <span className="mt-1 text-xs text-muted-foreground">PDF, JPG or PNG · under 10MB</span>
+            </button>
+            <div className="mt-3 grid gap-2 sm:hidden">
+              <Button type="button" variant="outline" onClick={() => cameraInputRef.current?.click()}>
+                <Camera className="h-4 w-4" />
+                Take a Photo
+              </Button>
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <FileUp className="h-4 w-4" />
+                Choose File
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Tip: Take a clear, well-lit photo of the full payment schedule page for best results.
+              </p>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Supports builder allotment letters, payment schedules, and demand letters.
+            </p>
+            {scheduleFile && (
+              <Badge variant="outline" className="mt-3 gap-1.5 py-1">
+                {scheduleFile.name}
+                <button type="button" onClick={() => setScheduleFile(null)} aria-label="Remove schedule file">
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {extractMessage && (
+              <div
+                className={cn(
+                  "mt-4 rounded-xl border px-4 py-3 text-sm",
+                  extractMessage.type === "success"
+                    ? "border-success/25 bg-success-soft text-success-soft-foreground"
+                    : "border-destructive/25 bg-danger-soft text-danger-soft-foreground",
+                )}
+              >
+                {extractMessage.text}
+              </div>
+            )}
+            <Button
+              type="button"
+              className="mt-4 w-full sm:w-auto"
+              disabled={!scheduleFile || extracting}
+              onClick={extractPaymentPlan}
+            >
+              {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : "✨"}
+              Extract Payment Plan
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            <span>or enter stages manually below</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
           <div className="overflow-x-auto -mx-5 sm:-mx-6">
             <div className="inline-block min-w-full px-5 sm:px-6">
               <table className="min-w-full text-sm">
