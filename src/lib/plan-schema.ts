@@ -179,3 +179,150 @@ export function recommendEmergencyFund(p: Profile): EmergencyFundPref {
   if (p.elderlyParents || p.soleEarner || !p.healthInsurance) return "conservative";
   return "balanced";
 }
+
+export type AffordabilityVerdict = "safe" | "stretch" | "risky";
+export type EmergencyFundStatus = "Protected" | "Tight" | "At Risk";
+
+export interface AffordabilityLayerScore {
+  name: string;
+  label: string;
+  score: number;
+}
+
+export interface AffordabilityPlan {
+  verdict: AffordabilityVerdict;
+  headline: string;
+  emergencyStatus: EmergencyFundStatus;
+  totalIncome: number;
+  totalFixed: number;
+  newEmi: number;
+  surplusBeforeEmi: number;
+  surplusAfterEmi: number;
+  emiToIncomePct: number;
+  emergencyFundNeeded: number;
+  layerScores: AffordabilityLayerScore[];
+}
+
+function scoreByRatio(ratio: number, thresholds: Array<[number, number]>): number {
+  const hit = thresholds.find(([min]) => ratio > min);
+  return hit ? hit[1] : 0;
+}
+
+export function calculateAffordabilityPlan(
+  finances: Finances,
+  home: Home,
+  profile: Profile,
+): AffordabilityPlan {
+  const income = totalIncome(finances);
+  const fixed = totalOutflow(finances);
+  const newEmi = calcEMI(loanAmount(home), home.interestRateA, home.tenureYears);
+  const surplusBeforeEmi = income - fixed;
+  const surplusAfterEmi = surplusBeforeEmi - newEmi;
+  const emiToIncomePct = income > 0 ? (newEmi / income) * 100 : 0;
+  const emergencyMonths =
+    profile.emergencyFundPref === "conservative"
+      ? 6
+      : profile.emergencyFundPref === "balanced"
+        ? 4
+        : 2;
+  const emergencyFundNeeded = emergencyMonths * (fixed / 2);
+  const availableSavings = Math.max(
+    0,
+    (home.downPayment || 0) - (profile.hasUpcomingExpense ? profile.upcomingExpenseAmount || 0 : 0),
+  );
+  const emergencyCoverageRatio = emergencyFundNeeded > 0 ? availableSavings / emergencyFundNeeded : 2;
+  const emergencyStatus: EmergencyFundStatus =
+    emergencyCoverageRatio >= 1
+      ? "Protected"
+      : emergencyCoverageRatio >= 0.5 || surplusAfterEmi > 0
+        ? "Tight"
+        : "At Risk";
+
+  const afterIncomeRatio = income > 0 ? surplusAfterEmi / income : 0;
+  const verdict: AffordabilityVerdict =
+    surplusAfterEmi < 0 || afterIncomeRatio < 0.05 || emergencyStatus === "At Risk"
+      ? "risky"
+      : afterIncomeRatio > 0.15 && emergencyStatus === "Protected"
+        ? "safe"
+        : "stretch";
+
+  const headline =
+    verdict === "safe"
+      ? "Your finances comfortably support this home purchase."
+      : verdict === "stretch"
+        ? "This purchase is possible but will require careful monthly management."
+        : "This purchase puts significant pressure on your monthly cash flow.";
+
+  const essentialExpenses =
+    totalCommitments(finances) +
+    (finances.expenses.housing || 0) +
+    (finances.expenses.family || 0) +
+    (finances.expenses.health || 0) +
+    (finances.expenses.daily || 0);
+  const currentInvestments = finances.expenses.investments || 0;
+  const investmentRatio = currentInvestments > 0 ? surplusAfterEmi / currentInvestments : surplusAfterEmi > 0 ? 2 : 0;
+
+  return {
+    verdict,
+    headline,
+    emergencyStatus,
+    totalIncome: income,
+    totalFixed: fixed,
+    newEmi,
+    surplusBeforeEmi,
+    surplusAfterEmi,
+    emiToIncomePct,
+    emergencyFundNeeded,
+    layerScores: [
+      {
+        name: "Layer 1 — Survival Check",
+        label: "Can your income cover essential expenses?",
+        score: income > essentialExpenses ? 100 : 0,
+      },
+      {
+        name: "Layer 2 — Liquidity Check",
+        label: "Monthly cash flow after new EMI",
+        score: scoreByRatio(afterIncomeRatio, [
+          [0.2, 100],
+          [0.15, 75],
+          [0.1, 50],
+          [0.05, 25],
+        ]),
+      },
+      {
+        name: "Layer 3 — Emergency Safety",
+        label: "Emergency fund protection",
+        score: scoreByRatio(emergencyCoverageRatio, [
+          [2, 100],
+          [1.5, 75],
+          [1, 50],
+          [0.5, 25],
+        ]),
+      },
+      {
+        name: "Layer 4 — Purchase Readiness",
+        label: "Home loan affordability ratio",
+        score:
+          emiToIncomePct < 35
+            ? 100
+            : emiToIncomePct < 40
+              ? 75
+              : emiToIncomePct < 45
+                ? 50
+                : emiToIncomePct < 50
+                  ? 25
+                  : 0,
+      },
+      {
+        name: "Layer 5 — Future Stability",
+        label: "Monthly surplus compared with current investments",
+        score: scoreByRatio(investmentRatio, [
+          [1, 100],
+          [0.75, 75],
+          [0.5, 50],
+          [0.25, 25],
+        ]),
+      },
+    ],
+  };
+}

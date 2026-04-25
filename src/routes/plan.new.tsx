@@ -9,6 +9,8 @@ import { WizardProgress } from "@/components/plan/WizardProgress";
 import { Step1Finances } from "@/components/plan/Step1Finances";
 import { Step2Home } from "@/components/plan/Step2Home";
 import { Step3Profile } from "@/components/plan/Step3Profile";
+import { Step4Plan } from "@/components/plan/Step4Plan";
+import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -49,6 +51,7 @@ function PlanWizardPage() {
   const [profile, setProfile] = React.useState<Profile>(defaultProfile);
   const [planReady, setPlanReady] = React.useState(false);
   const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved">("idle");
+  const [calculating, setCalculating] = React.useState(false);
 
   // Auth guard
   React.useEffect(() => {
@@ -170,6 +173,20 @@ function PlanWizardPage() {
         ? home.propertyCost > 0
         : true;
 
+  const goToStep = (nextStep: number) =>
+    navigate({
+      to: "/plan/new",
+      search: { step: nextStep, planId },
+    });
+
+  const calculatePlan = () => {
+    setCalculating(true);
+    window.setTimeout(() => {
+      setCalculating(false);
+      goToStep(4);
+    }, 2300);
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-30 w-full border-b border-border bg-background/85 backdrop-blur">
@@ -185,17 +202,21 @@ function PlanWizardPage() {
       </header>
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        {step === 1 ? (
+        {calculating ? (
+          <CalculatingPlan />
+        ) : step === 1 ? (
           <Step1Finances value={finances} onChange={setFinances} />
         ) : step === 2 ? (
           <Step2Home value={home} onChange={setHome} />
         ) : step === 3 ? (
           <Step3Profile value={profile} onChange={setProfile} />
+        ) : step === 4 ? (
+          <Step4Plan finances={finances} home={home} profile={profile} />
         ) : (
           <ComingSoon step={step} />
         )}
 
-        <div className="mt-10 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {!calculating && <div className="mt-10 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Button
             variant="ghost"
             asChild={step === 1}
@@ -203,10 +224,7 @@ function PlanWizardPage() {
               step === 1
                 ? undefined
                 : () =>
-                    navigate({
-                      to: "/plan/new",
-                      search: { step: step - 1, planId },
-                    })
+                    goToStep(step - 1)
             }
           >
             {step === 1 ? (
@@ -228,10 +246,7 @@ function PlanWizardPage() {
               disabled={!canGoNext}
               className={step === 3 ? "h-12 px-8 text-base font-semibold" : undefined}
               onClick={() =>
-                navigate({
-                  to: "/plan/new",
-                  search: { step: step + 1, planId },
-                })
+                step === 3 ? calculatePlan() : goToStep(step + 1)
               }
             >
               {step === 1
@@ -246,8 +261,22 @@ function PlanWizardPage() {
               Finish
             </Button>
           )}
-        </div>
+        </div>}
       </main>
+    </div>
+  );
+}
+
+function CalculatingPlan() {
+  return (
+    <div className="flex min-h-[420px] flex-col items-center justify-center rounded-2xl border border-border bg-card p-8 text-center shadow-soft">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <h1 className="mt-5 text-xl font-extrabold text-foreground sm:text-2xl">
+        Building your personalised affordability plan...
+      </h1>
+      <div className="mt-6 w-full max-w-sm">
+        <Progress value={72} />
+      </div>
     </div>
   );
 }
