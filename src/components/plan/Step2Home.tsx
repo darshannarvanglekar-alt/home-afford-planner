@@ -465,8 +465,15 @@ export function Step2Home({ value, onChange }: Props) {
                   {value.builderStages.map((s) => {
                     const total = (s.bankPays || 0) + (s.youPay || 0);
                     return (
-                      <tr key={s.id} className="border-b border-border/60 align-top">
+                      <tr
+                        key={s.id}
+                        className={cn(
+                          "border-b border-border/60 align-top",
+                          aiStageIds.has(s.id) && "border-l-4 border-l-primary bg-primary/5",
+                        )}
+                      >
                         <td className="py-2 pr-3">
+                          {aiStageIds.has(s.id) && <Badge variant="secondary" className="mb-1">AI</Badge>}
                           <Input
                             value={s.name}
                             onChange={(e) => setStage(s.id, { name: e.target.value })}
