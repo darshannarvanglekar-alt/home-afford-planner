@@ -1,9 +1,10 @@
 import * as React from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Camera, FileUp, Loader2, Plus, Trash2, Upload, X } from "lucide-react";
 import { CurrencyInput } from "./CurrencyInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -12,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import {
   type Home,
   type PropertyType,
@@ -24,6 +26,14 @@ import {
 interface Props {
   value: Home;
   onChange: (next: Home) => void;
+}
+
+interface ExtractedStage {
+  stageName: string;
+  month: number;
+  bankAmount: number;
+  selfAmount: number;
+  totalAmount: number;
 }
 
 const PROPERTY_OPTIONS: Array<{
