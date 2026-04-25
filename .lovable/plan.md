@@ -1,39 +1,115 @@
+# Plan: AI-powered bank statement analysis for Step 1
 
-# Verify Google OAuth on the published site
+## What will be added
 
-Your Google SSO code is already correctly wired:
-- `auth.tsx` calls `lovable.auth.signInWithOAuth("google", { redirect_uri: ${origin}/dashboard })`
-- The Lovable managed Google OAuth requires **no secret setup**
-- On success, the user lands on `/dashboard`, which is protected by `useAuth` and shows the dashboard once the session is set
+Add a new upload card above the existing Step 1 finance form:
 
-The `missing OAuth secret` 400 error you saw is almost always an environment-specific backend config issue in the **preview environment** — not your application code. Per Lovable's known guidance, OAuth in the preview Cloud Dev environment can fail even when production works perfectly.
+- Heading: "Let AI fill this for you"
+- PDF/CSV multi-file upload, up to 6 files
+- Per-file validation: PDF or CSV only, max 10MB each
+- "Analyse with AI" button with loading spinner
+- Privacy copy explaining that files are not stored
+- Divider: "or enter manually below"
+- Success/error messages that do not block manual entry
 
-## Recommended verification path
+## User flow
 
-1. **Publish the project** (Publish button, top-right of Lovable).
-2. Open the **published URL** (`https://...lovable.app`).
-3. Click **Continue with Google** on `/auth`.
-4. Confirm you land on `/dashboard` and see your greeting.
+1. User uploads 1-6 bank statement files.
+2. User clicks "Analyse with AI".
+3. The app sends the files directly to a backend server function for temporary extraction and analysis.
+4. The backend extracts text from CSV/PDF content, calls the AI model using `OPENAI_API_KEY`, and returns structured finance values.
+5. Step 1 auto-fills income, commitments, and expense fields.
+6. The normal planner auto-save saves only the extracted numbers into the plan data.
+7. Uploaded files are cleared from browser state immediately after processing.
 
-## Expected outcomes
+## Privacy behavior
 
-- **Works on published site** → the code and managed Google OAuth are fully functional. Preview-only failures are an environment issue and require no code changes. You can keep developing in preview and use the published URL whenever you need to test the Google flow end-to-end.
-- **Fails on published site too** → then there's a real config problem and we'll dig into the Cloud Auth Settings together (open the Lovable Cloud dashboard → Users → Auth Settings → Google).
+- No bank statement file will be uploaded to Lovable Cloud storage.
+- No original file will be saved in the database.
+- Files are held only in memory during the request.
+- The UI will show confirmation after analysis: "File deleted from our servers after analysis."
+- Only the extracted numeric fields are persisted in the existing plan JSON data.
 
-## What I will NOT change
+## Technical implementation
 
-Per Lovable's stack guidance, I will not:
-- Modify the OAuth `redirect_uri` or callback URL
-- Switch from `lovable.auth.signInWithOAuth` to a direct Supabase client call (managed OAuth requires the lovable wrapper)
-- Add CORS headers or alter fetch behavior
-- Reconfigure the providers table or RLS
+### Backend analysis function
 
-These would all break the working managed-OAuth flow.
+Create a TanStack Start server function, for example `src/lib/bank-analysis.functions.ts`, that:
 
-## If you want a code-level change anyway
+- Accepts `FormData` with the selected files.
+- Validates:
+  - max 6 files
+  - each file under 10MB
+  - MIME type or filename is PDF/CSV
+- Extracts text:
+  - CSV: read file text directly
+  - PDF: use a Worker-compatible PDF text extraction library if available; otherwise add one that works in this runtime, avoiding Node-only/native packages
+- Truncates or guards oversized extracted text to keep the AI request reliable.
+- Calls OpenAI using `process.env.OPENAI_API_KEY` from server runtime only.
+- Uses model `gpt-4o-mini` per request.
+- Sends the exact extraction prompt and requests JSON-only output.
+- Parses and validates the AI JSON response with Zod.
+- Returns:
+  - extracted finance values
+  - estimated number of months covered when detectable, otherwise a conservative count based on the uploaded statement span
+  - a message-safe error if extraction fails
 
-The only reasonable code change would be to **also pass `prompt: "select_account"`** to the Google call, so users with multiple Google accounts always see the picker instead of being silently signed in with the most recent one. This is a UX nicety, not a fix. Let me know if you'd like that added.
+### Frontend upload UI
 
-## Action for you
+Update `src/components/plan/Step1Finances.tsx` to include:
 
-Click **Publish** and test the Google button on the published URL. Reply with the result and — if it still fails there — paste the exact error message and I'll investigate the live auth logs.
+- Upload card above the current heading/manual form.
+- Hidden file input plus clickable/droppable dashed upload zone.
+- Mobile-friendly file selection with `accept=".pdf,.csv,application/pdf,text/csv"` and `multiple`.
+- File list with remove buttons.
+- Analyze button state:
+  - disabled when no files selected
+  - spinner while processing
+- Inline validation messages for invalid type/size.
+- Success/error messages matching the requested copy.
+
+### Auto-fill and AI badges
+
+Update Step 1 state handling so the upload component can call `onChange` with the extracted values mapped to existing fields:
+
+```text
+primarySalary       -> income.primarySalary
+additionalIncome    -> income.additionalIncome
+familyContribution  -> income.familyContribution
+existingEMIs        -> commitments.emis
+insurancePremiums   -> commitments.insurance
+housingUtilities    -> expenses.housing
+familyDependents    -> expenses.family
+healthProtection    -> expenses.health
+dailyLiving         -> expenses.daily
+investmentsSavings  -> expenses.investments
+discretionary       -> expenses.discretionary
+```
+
+Track which fields were AI-filled in local Step 1 UI state and render:
+
+- subtle indigo left border around AI-filled field wrappers
+- small "AI" badge near each auto-filled label
+- all fields remain editable
+
+If a user edits a field manually after AI-fill, I will keep the AI badge visible for that session to show the source of the initial value, unless you later want it cleared on edit.
+
+## Important note about secrets
+
+I will use `OPENAI_API_KEY` only on the backend. It will not be exposed to client code and will not use a `VITE_` prefix.
+
+If the secret is not actually present at implementation time, the UI can be built, but the analysis call will return a friendly configuration error until the secret is added in Lovable Cloud secrets.
+
+## Files likely to change
+
+- `src/components/plan/Step1Finances.tsx`
+- `src/lib/bank-analysis.functions.ts` or similar new server-function file
+- `src/lib/plan-schema.ts` for the extracted JSON validation/mapping types
+- `package.json` / lockfile only if a PDF text extraction package is needed
+
+## Not included
+
+- No file storage bucket
+- No database schema changes
+- No storage of original bank statements
+- No changes to the existing manual Step 1 calculations beyond auto-filling values
