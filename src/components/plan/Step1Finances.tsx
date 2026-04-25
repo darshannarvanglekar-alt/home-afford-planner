@@ -305,14 +305,22 @@ export function Step1Finances({ value, onChange }: Props) {
           {EXPENSE_CARDS.map((c) => (
             <div
               key={c.key}
-              className="rounded-xl border border-border bg-card p-4 shadow-soft"
+              className={cn(
+                "rounded-xl border bg-card p-4 shadow-soft",
+                aiFields.has(`expenses.${c.key}`)
+                  ? "border-primary/30 border-l-4 border-l-primary"
+                  : "border-border",
+              )}
             >
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-xl">
                   {c.emoji}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold text-foreground">{c.label}</div>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    {c.label}
+                    {aiFields.has(`expenses.${c.key}`) ? <Badge variant="secondary">AI</Badge> : null}
+                  </div>
                   <div className="text-xs text-muted-foreground">{c.helper}</div>
                 </div>
               </div>
@@ -354,15 +362,26 @@ function Field({
   helper,
   children,
   className,
+  ai = false,
 }: {
   label: string;
   helper?: string;
   children: React.ReactNode;
   className?: string;
+  ai?: boolean;
 }) {
   return (
-    <div className={cn("space-y-1.5", className)}>
-      <Label className="text-sm">{label}</Label>
+    <div
+      className={cn(
+        "space-y-1.5 rounded-lg",
+        ai && "border-l-4 border-l-primary pl-3",
+        className,
+      )}
+    >
+      <Label className="inline-flex items-center gap-2 text-sm">
+        {label}
+        {ai ? <Badge variant="secondary">AI</Badge> : null}
+      </Label>
       {children}
       {helper ? <p className="text-xs text-muted-foreground">{helper}</p> : null}
     </div>
