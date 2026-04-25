@@ -1,14 +1,19 @@
 import * as React from "react";
-import { AlertCircle, ChevronDown, ShieldCheck, TriangleAlert } from "lucide-react";
+import { AlertCircle, ChevronDown, Loader2, RefreshCw, ShieldCheck, TriangleAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import {
+  calcEMI,
   calculateAffordabilityPlan,
   formatINR,
   type Finances,
   type Home,
+  loanAmount,
   type Profile,
+  totalCommitments,
+  totalExpenses,
 } from "@/lib/plan-schema";
 
 interface Props {
@@ -88,6 +93,8 @@ export function Step4Plan({ finances, home, profile }: Props) {
         />
         <MetricCard label="Emergency Fund Needed" value={formatINR(plan.emergencyFundNeeded)} />
       </section>
+
+      <SmartSuggestionsPanel finances={finances} home={home} profile={profile} />
 
       <section className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
         <Button
