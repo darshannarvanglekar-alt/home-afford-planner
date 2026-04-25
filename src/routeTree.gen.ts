@@ -13,6 +13,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlanNewRouteImport } from './routes/plan.new'
+import { Route as ApiAnalyzeBankStatementRouteImport } from './routes/api.analyze-bank-statement'
 
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
@@ -34,17 +35,24 @@ const PlanNewRoute = PlanNewRouteImport.update({
   path: '/plan/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAnalyzeBankStatementRoute = ApiAnalyzeBankStatementRouteImport.update({
+  id: '/api/analyze-bank-statement',
+  path: '/api/analyze-bank-statement',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
   '/plan/new': typeof PlanNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
   '/plan/new': typeof PlanNewRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,33 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
   '/plan/new': typeof PlanNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/plan/new'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/api/analyze-bank-statement'
+    | '/plan/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/plan/new'
-  id: '__root__' | '/' | '/auth' | '/dashboard' | '/plan/new'
+  to: '/' | '/auth' | '/dashboard' | '/api/analyze-bank-statement' | '/plan/new'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/api/analyze-bank-statement'
+    | '/plan/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
+  ApiAnalyzeBankStatementRoute: typeof ApiAnalyzeBankStatementRoute
   PlanNewRoute: typeof PlanNewRoute
 }
 
@@ -99,6 +120,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlanNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/analyze-bank-statement': {
+      id: '/api/analyze-bank-statement'
+      path: '/api/analyze-bank-statement'
+      fullPath: '/api/analyze-bank-statement'
+      preLoaderRoute: typeof ApiAnalyzeBankStatementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -106,6 +134,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
+  ApiAnalyzeBankStatementRoute: ApiAnalyzeBankStatementRoute,
   PlanNewRoute: PlanNewRoute,
 }
 export const routeTree = rootRouteImport
