@@ -13,6 +13,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlanNewRouteImport } from './routes/plan.new'
+import { Route as ApiExtractBuilderPaymentPlanRouteImport } from './routes/api.extract-builder-payment-plan'
 import { Route as ApiAnalyzeBankStatementRouteImport } from './routes/api.analyze-bank-statement'
 
 const DashboardRoute = DashboardRouteImport.update({
@@ -35,6 +36,12 @@ const PlanNewRoute = PlanNewRouteImport.update({
   path: '/plan/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiExtractBuilderPaymentPlanRoute =
+  ApiExtractBuilderPaymentPlanRouteImport.update({
+    id: '/api/extract-builder-payment-plan',
+    path: '/api/extract-builder-payment-plan',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAnalyzeBankStatementRoute = ApiAnalyzeBankStatementRouteImport.update({
   id: '/api/analyze-bank-statement',
   path: '/api/analyze-bank-statement',
@@ -46,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
+  '/api/extract-builder-payment-plan': typeof ApiExtractBuilderPaymentPlanRoute
   '/plan/new': typeof PlanNewRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +61,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
+  '/api/extract-builder-payment-plan': typeof ApiExtractBuilderPaymentPlanRoute
   '/plan/new': typeof PlanNewRoute
 }
 export interface FileRoutesById {
@@ -61,6 +70,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
+  '/api/extract-builder-payment-plan': typeof ApiExtractBuilderPaymentPlanRoute
   '/plan/new': typeof PlanNewRoute
 }
 export interface FileRouteTypes {
@@ -70,15 +80,23 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/api/analyze-bank-statement'
+    | '/api/extract-builder-payment-plan'
     | '/plan/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/api/analyze-bank-statement' | '/plan/new'
+  to:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/api/analyze-bank-statement'
+    | '/api/extract-builder-payment-plan'
+    | '/plan/new'
   id:
     | '__root__'
     | '/'
     | '/auth'
     | '/dashboard'
     | '/api/analyze-bank-statement'
+    | '/api/extract-builder-payment-plan'
     | '/plan/new'
   fileRoutesById: FileRoutesById
 }
@@ -87,6 +105,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
   ApiAnalyzeBankStatementRoute: typeof ApiAnalyzeBankStatementRoute
+  ApiExtractBuilderPaymentPlanRoute: typeof ApiExtractBuilderPaymentPlanRoute
   PlanNewRoute: typeof PlanNewRoute
 }
 
@@ -120,6 +139,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlanNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/extract-builder-payment-plan': {
+      id: '/api/extract-builder-payment-plan'
+      path: '/api/extract-builder-payment-plan'
+      fullPath: '/api/extract-builder-payment-plan'
+      preLoaderRoute: typeof ApiExtractBuilderPaymentPlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/analyze-bank-statement': {
       id: '/api/analyze-bank-statement'
       path: '/api/analyze-bank-statement'
@@ -135,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
   ApiAnalyzeBankStatementRoute: ApiAnalyzeBankStatementRoute,
+  ApiExtractBuilderPaymentPlanRoute: ApiExtractBuilderPaymentPlanRoute,
   PlanNewRoute: PlanNewRoute,
 }
 export const routeTree = rootRouteImport

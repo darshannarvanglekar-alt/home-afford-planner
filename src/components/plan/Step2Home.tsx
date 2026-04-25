@@ -1,9 +1,10 @@
 import * as React from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Camera, FileUp, Loader2, Plus, Trash2, Upload, X } from "lucide-react";
 import { CurrencyInput } from "./CurrencyInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -12,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import {
   type Home,
   type PropertyType,
@@ -24,6 +26,14 @@ import {
 interface Props {
   value: Home;
   onChange: (next: Home) => void;
+}
+
+interface ExtractedStage {
+  stageName: string;
+  month: number;
+  bankAmount: number;
+  selfAmount: number;
+  totalAmount: number;
 }
 
 const PROPERTY_OPTIONS: Array<{
@@ -40,6 +50,13 @@ const TENURE_OPTIONS = [5, 10, 15, 20, 25, 30];
 const POSSESSION_MONTHS = Array.from({ length: 60 }, (_, i) => i + 1);
 
 export function Step2Home({ value, onChange }: Props) {
+  const [scheduleFile, setScheduleFile] = React.useState<File | null>(null);
+  const [extracting, setExtracting] = React.useState(false);
+  const [extractMessage, setExtractMessage] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [aiStageIds, setAiStageIds] = React.useState<Set<string>>(new Set());
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
+
   const set = <K extends keyof Home>(k: K, v: Home[K]) =>
     onChange({ ...value, [k]: v });
 
@@ -81,6 +98,78 @@ export function Step2Home({ value, onChange }: Props) {
       ...value,
       builderStages: value.builderStages.filter((s) => s.id !== id),
     });
+  };
+
+  const validateScheduleFile = (file: File) => {
+    const ok = file.type === "application/pdf" || file.type === "image/jpeg" || file.type === "image/png" || /\.(pdf|jpg|jpeg|png)$/i.test(file.name);
+    if (!ok) {
+      setExtractMessage({ type: "error", text: "Please upload a PDF, JPG or PNG file only." });
+      return false;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setExtractMessage({ type: "error", text: "File too large. Please upload under 10MB or take a photo instead." });
+      return false;
+    }
+    return true;
+  };
+
+  const chooseScheduleFile = (file?: File) => {
+    if (!file) return;
+    setExtractMessage(null);
+    if (validateScheduleFile(file)) setScheduleFile(file);
+  };
+
+  const extractPaymentPlan = async () => {
+    if (!scheduleFile) return;
+    setExtracting(true);
+    setExtractMessage(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Please sign in before extracting a payment plan.");
+
+      const form = new FormData();
+      form.append("file", scheduleFile);
+      form.append("propertyCost", String(value.propertyCost || 0));
+
+      const res = await fetch("/api/extract-builder-payment-plan", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      const data = await res.json() as { stages?: ExtractedStage[]; propertyCost?: number; error?: string };
+      if (!res.ok || !data.stages?.length) {
+        throw new Error(data.error || "We couldn't find a payment schedule in this document. Please enter the stages manually below.");
+      }
+
+      const stages = data.stages.map((stage, index) => ({
+        id: `ai-${Date.now()}-${index}`,
+        name: stage.stageName || `Stage ${index + 1}`,
+        month: Math.max(1, Math.round(stage.month || index + 1)),
+        bankPays: Math.round(stage.bankAmount || 0),
+        youPay: Math.round(stage.selfAmount || Math.max(0, (stage.totalAmount || 0) - (stage.bankAmount || 0))),
+      }));
+      onChange({
+        ...value,
+        propertyCost: value.propertyCost || Math.round(data.propertyCost || 0),
+        builderStages: stages,
+      });
+      setAiStageIds(new Set(stages.map((s) => s.id)));
+      setExtractMessage({
+        type: "success",
+        text: `✅ Found ${stages.length} payment stages. Please review and edit if anything looks wrong. ✅ Document deleted after analysis.`,
+      });
+      setScheduleFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+    } catch (error) {
+      setExtractMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "The image quality is too low to read. Please try a clearer photo or upload the PDF directly.",
+      });
+    } finally {
+      setExtracting(false);
+    }
   };
 
   const totalBank = value.builderStages.reduce((a, s) => a + (s.bankPays || 0), 0);
@@ -270,6 +359,95 @@ export function Step2Home({ value, onChange }: Props) {
             </p>
           </div>
 
+          <div className="rounded-2xl border border-border bg-background p-4 shadow-soft sm:p-5">
+            <h3 className="text-lg font-bold text-foreground">Upload your builder payment schedule</h3>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Have a payment plan PDF or image from your builder? Upload it and AI will fill the stage table automatically.
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+              className="hidden"
+              onChange={(e) => chooseScheduleFile(e.target.files?.[0])}
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => chooseScheduleFile(e.target.files?.[0])}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={(e) => {
+                e.preventDefault();
+                chooseScheduleFile(e.dataTransfer.files?.[0]);
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              className="mt-4 flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/35 px-4 py-8 text-center transition hover:border-primary/50 hover:bg-primary-soft/40"
+            >
+              <Upload className="h-8 w-8 text-primary" />
+              <span className="mt-3 text-sm font-semibold text-foreground">
+                📄 Drop builder payment schedule here or click to upload
+              </span>
+              <span className="mt-1 text-xs text-muted-foreground">PDF, JPG or PNG · under 10MB</span>
+            </button>
+            <div className="mt-3 grid gap-2 sm:hidden">
+              <Button type="button" variant="outline" onClick={() => cameraInputRef.current?.click()}>
+                <Camera className="h-4 w-4" />
+                Take a Photo
+              </Button>
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <FileUp className="h-4 w-4" />
+                Choose File
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Tip: Take a clear, well-lit photo of the full payment schedule page for best results.
+              </p>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Supports builder allotment letters, payment schedules, and demand letters.
+            </p>
+            {scheduleFile && (
+              <Badge variant="outline" className="mt-3 gap-1.5 py-1">
+                {scheduleFile.name}
+                <button type="button" onClick={() => setScheduleFile(null)} aria-label="Remove schedule file">
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {extractMessage && (
+              <div
+                className={cn(
+                  "mt-4 rounded-xl border px-4 py-3 text-sm",
+                  extractMessage.type === "success"
+                    ? "border-success/25 bg-success-soft text-success-soft-foreground"
+                    : "border-destructive/25 bg-danger-soft text-danger-soft-foreground",
+                )}
+              >
+                {extractMessage.text}
+              </div>
+            )}
+            <Button
+              type="button"
+              className="mt-4 w-full sm:w-auto"
+              disabled={!scheduleFile || extracting}
+              onClick={extractPaymentPlan}
+            >
+              {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : "✨"}
+              Extract Payment Plan
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            <span>or enter stages manually below</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
           <div className="overflow-x-auto -mx-5 sm:-mx-6">
             <div className="inline-block min-w-full px-5 sm:px-6">
               <table className="min-w-full text-sm">
@@ -287,8 +465,15 @@ export function Step2Home({ value, onChange }: Props) {
                   {value.builderStages.map((s) => {
                     const total = (s.bankPays || 0) + (s.youPay || 0);
                     return (
-                      <tr key={s.id} className="border-b border-border/60 align-top">
+                      <tr
+                        key={s.id}
+                        className={cn(
+                          "border-b border-border/60 align-top",
+                          aiStageIds.has(s.id) && "border-l-4 border-l-primary bg-primary/5",
+                        )}
+                      >
                         <td className="py-2 pr-3">
+                          {aiStageIds.has(s.id) && <Badge variant="secondary" className="mb-1">AI</Badge>}
                           <Input
                             value={s.name}
                             onChange={(e) => setStage(s.id, { name: e.target.value })}
