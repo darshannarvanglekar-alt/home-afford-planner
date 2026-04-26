@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { proBadgeText } from "@/lib/subscription";
 import {
   type Finances,
   formatINR,
@@ -31,6 +32,8 @@ interface ExtractedStatementValues {
 interface Props {
   value: Finances;
   onChange: (next: Finances) => void;
+  canUseProFeatures?: boolean;
+  onUpgradeRequired?: (message: string) => void;
 }
 
 const EXPENSE_CARDS: Array<{
@@ -47,7 +50,7 @@ const EXPENSE_CARDS: Array<{
   { key: "discretionary", emoji: "🎉", label: "Discretionary", helper: "dining, travel, entertainment, shopping" },
 ];
 
-export function Step1Finances({ value, onChange }: Props) {
+export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpgradeRequired }: Props) {
   const [files, setFiles] = React.useState<File[]>([]);
   const [analysing, setAnalysing] = React.useState(false);
   const [message, setMessage] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -59,6 +62,10 @@ export function Step1Finances({ value, onChange }: Props) {
   };
 
   const validateAndAddFiles = (incoming: FileList | File[]) => {
+    if (!canUseProFeatures) {
+      onUpgradeRequired?.("AI statement analysis is a Pro feature. Upgrade to unlock instant auto-fill.");
+      return;
+    }
     setMessage(null);
     const selected = Array.from(incoming);
     const valid: File[] = [];
@@ -118,6 +125,10 @@ export function Step1Finances({ value, onChange }: Props) {
   };
 
   const handleAnalyze = async () => {
+    if (!canUseProFeatures) {
+      onUpgradeRequired?.("AI statement analysis is a Pro feature. Upgrade to unlock instant auto-fill.");
+      return;
+    }
     if (files.length === 0) return;
     setAnalysing(true);
     setMessage(null);
@@ -155,7 +166,10 @@ export function Step1Finances({ value, onChange }: Props) {
     <div className="space-y-8">
       <section className="rounded-2xl border border-border bg-card p-5 shadow-card sm:p-6">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-foreground">Let AI fill this for you</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-xl font-bold tracking-tight text-foreground">Let AI fill this for you</h2>
+            <Badge variant="secondary">{proBadgeText()}</Badge>
+          </div>
           <p className="mt-1.5 text-sm text-muted-foreground">
             Upload your last 3-6 months of bank statements. Our AI will auto-detect your income, expenses, EMIs and investments.
           </p>
