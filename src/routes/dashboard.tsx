@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Home, LogOut, User as UserIcon, Plus, FileText, Settings } from "lucide-react";
+import { FileText, FolderOpen, Home, LogOut, MoreVertical, Pencil, Plus, Settings, Trash2, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +13,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { UpgradeModal } from "@/components/plan/UpgradeModal";
 import { useAuth } from "@/lib/auth";
 import { FREE_PLAN_LIMITS, LAUNCH_MODE, hasProAccess } from "@/lib/subscription";
+import { formatINR } from "@/lib/plan-schema";
+import { parsePlanData, propertyTypeLabel, timeAgo } from "@/lib/plan-display";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/dashboard")({
