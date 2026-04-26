@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { proBadgeText } from "@/lib/subscription";
 import {
   type Home,
   type PropertyType,
@@ -26,6 +27,8 @@ import {
 interface Props {
   value: Home;
   onChange: (next: Home) => void;
+  canUseProFeatures?: boolean;
+  onUpgradeRequired?: (message: string) => void;
 }
 
 interface ExtractedStage {
@@ -49,7 +52,7 @@ const PROPERTY_OPTIONS: Array<{
 const TENURE_OPTIONS = [5, 10, 15, 20, 25, 30];
 const POSSESSION_MONTHS = Array.from({ length: 60 }, (_, i) => i + 1);
 
-export function Step2Home({ value, onChange }: Props) {
+export function Step2Home({ value, onChange, canUseProFeatures = true, onUpgradeRequired }: Props) {
   const [scheduleFile, setScheduleFile] = React.useState<File | null>(null);
   const [extracting, setExtracting] = React.useState(false);
   const [extractMessage, setExtractMessage] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -115,11 +118,19 @@ export function Step2Home({ value, onChange }: Props) {
 
   const chooseScheduleFile = (file?: File) => {
     if (!file) return;
+    if (!canUseProFeatures) {
+      onUpgradeRequired?.("AI document extraction is a Pro feature. Upgrade to unlock.");
+      return;
+    }
     setExtractMessage(null);
     if (validateScheduleFile(file)) setScheduleFile(file);
   };
 
   const extractPaymentPlan = async () => {
+    if (!canUseProFeatures) {
+      onUpgradeRequired?.("AI document extraction is a Pro feature. Upgrade to unlock.");
+      return;
+    }
     if (!scheduleFile) return;
     setExtracting(true);
     setExtractMessage(null);
@@ -360,7 +371,10 @@ export function Step2Home({ value, onChange }: Props) {
           </div>
 
           <div className="rounded-2xl border border-border bg-background p-4 shadow-soft sm:p-5">
-            <h3 className="text-lg font-bold text-foreground">Upload your builder payment schedule</h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-lg font-bold text-foreground">Upload your builder payment schedule</h3>
+              <Badge variant="secondary">{proBadgeText()}</Badge>
+            </div>
             <p className="mt-1.5 text-sm text-muted-foreground">
               Have a payment plan PDF or image from your builder? Upload it and AI will fill the stage table automatically.
             </p>

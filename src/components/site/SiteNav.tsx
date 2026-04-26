@@ -19,6 +19,9 @@ export function SiteNav() {
         </Link>
 
         <nav className="hidden items-center gap-3 md:flex">
+          <Button asChild variant="ghost">
+            <Link to="/pricing">Pricing</Link>
+          </Button>
           <Button asChild variant="outline">
             <Link to="/auth">Sign In</Link>
           </Button>
@@ -45,6 +48,9 @@ export function SiteNav() {
         )}
       >
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-3 sm:px-6">
+          <Button asChild variant="ghost" className="w-full" onClick={() => setOpen(false)}>
+            <Link to="/pricing">Pricing</Link>
+          </Button>
           <Button asChild variant="outline" className="w-full" onClick={() => setOpen(false)}>
             <Link to="/auth">Sign In</Link>
           </Button>

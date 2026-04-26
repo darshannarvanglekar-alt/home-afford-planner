@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { proBadgeText } from "@/lib/subscription";
 import {
   calcEMI,
   calculateAffordabilityPlan,
@@ -20,9 +21,11 @@ interface Props {
   finances: Finances;
   home: Home;
   profile: Profile;
+  canUseProFeatures?: boolean;
+  onUpgradeRequired?: (message: string) => void;
 }
 
-export function Step4Plan({ finances, home, profile }: Props) {
+export function Step4Plan({ finances, home, profile, canUseProFeatures = true, onUpgradeRequired }: Props) {
   const [open, setOpen] = React.useState(true);
   const plan = calculateAffordabilityPlan(finances, home, profile);
   const verdictTone = {
@@ -94,7 +97,7 @@ export function Step4Plan({ finances, home, profile }: Props) {
         <MetricCard label="Emergency Fund Needed" value={formatINR(plan.emergencyFundNeeded)} />
       </section>
 
-      <SmartSuggestionsPanel finances={finances} home={home} profile={profile} />
+      <SmartSuggestionsPanel finances={finances} home={home} profile={profile} canUseProFeatures={canUseProFeatures} onUpgradeRequired={onUpgradeRequired} />
 
       <section className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
         <Button
@@ -136,7 +139,7 @@ interface SmartSuggestion {
   type: SuggestionType;
 }
 
-function SmartSuggestionsPanel({ finances, home, profile }: Props) {
+function SmartSuggestionsPanel({ finances, home, profile, canUseProFeatures = true, onUpgradeRequired }: Props) {
   const [suggestions, setSuggestions] = React.useState<SmartSuggestion[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
@@ -196,14 +199,41 @@ function SmartSuggestionsPanel({ finances, home, profile }: Props) {
   }, [finances, home, profile, plan.emiToIncomePct, plan.emergencyFundNeeded, plan.newEmi, plan.surplusAfterEmi, plan.totalIncome, plan.verdict]);
 
   React.useEffect(() => {
+    if (!canUseProFeatures) return;
     void generateSuggestions();
-  }, [generateSuggestions]);
+  }, [canUseProFeatures, generateSuggestions]);
+
+  if (!canUseProFeatures) {
+    return (
+      <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
+        <div className="pointer-events-none select-none blur-sm">
+          <h2 className="text-xl font-extrabold text-foreground sm:text-2xl">✨ Your Personalised Action Plan</h2>
+          <div className="mt-5 space-y-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="rounded-xl border border-border bg-muted/40 p-4">
+                <div className="h-4 w-44 rounded bg-primary/10" />
+                <div className="mt-3 h-3 w-full rounded bg-primary/10" />
+                <div className="mt-2 h-3 w-5/6 rounded bg-primary/10" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="absolute inset-0 flex items-center justify-center bg-background/70 p-6 backdrop-blur-sm">
+          <div className="max-w-sm text-center">
+            <p className="text-lg font-extrabold text-foreground">✨ Upgrade to Pro to unlock personalised AI suggestions for your plan.</p>
+            <Button type="button" className="mt-4" onClick={() => onUpgradeRequired?.("AI personalised suggestions are a Pro feature.")}>Upgrade to Pro</Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-xl font-extrabold text-foreground sm:text-2xl">✨ Your Personalised Action Plan</h2>
+          <span className="mt-2 inline-flex rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">{proBadgeText()}</span>
           <p className="mt-1 text-sm text-muted-foreground">AI-generated suggestions based on your actual numbers</p>
         </div>
         <Button type="button" variant="outline" onClick={generateSuggestions} disabled={loading}>
