@@ -26,6 +26,7 @@ import {
   type Home,
   type Profile,
 } from "@/lib/plan-schema";
+import { suggestPlanName } from "@/lib/plan-display";
 
 const searchSchema = z.object({
   step: fallback(z.number().int().min(1).max(4), 1).default(1),
@@ -51,6 +52,7 @@ function PlanWizardPage() {
   const [finances, setFinances] = React.useState<Finances>(defaultFinances);
   const [home, setHome] = React.useState<Home>(defaultHome);
   const [profile, setProfile] = React.useState<Profile>(defaultProfile);
+  const [planName, setPlanName] = React.useState("");
   const [planReady, setPlanReady] = React.useState(false);
   const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved">("idle");
   const [calculating, setCalculating] = React.useState(false);
@@ -72,7 +74,7 @@ function PlanWizardPage() {
       if (planId) {
         const { data, error } = await supabase
           .from("plans")
-          .select("id, data")
+          .select("id, name, data")
           .eq("id", planId)
           .maybeSingle();
 
@@ -95,6 +97,7 @@ function PlanWizardPage() {
         if (parsedH.success) setHome(parsedH.data);
         const parsedP = profileSchema.safeParse(blob.profile);
         if (parsedP.success) setProfile(parsedP.data);
+        setPlanName(data.name ?? "");
         setPlanReady(true);
       } else {
         const { data, error } = await supabase
@@ -143,14 +146,16 @@ function PlanWizardPage() {
     setSaveState("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
+      const nextName = planName.trim() && planName !== "Untitled plan" ? planName : suggestPlanName(home);
       const { error } = await supabase
         .from("plans")
-        .update({ data: { finances, home, profile } })
+        .update({ name: nextName, data: { finances, home, profile } })
         .eq("id", planId);
       if (error) {
         setSaveState("idle");
         toast.error("Couldn't save your changes.");
       } else {
+        setPlanName(nextName);
         setSaveState("saved");
         setTimeout(() => setSaveState("idle"), 1500);
       }
@@ -159,7 +164,22 @@ function PlanWizardPage() {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [finances, home, profile, planId, planReady]);
+  }, [finances, home, profile, planId, planName, planReady]);
+
+  const updatePlanName = async (name: string) => {
+    if (!planId) return;
+    const nextName = name || suggestPlanName(home);
+    setPlanName(nextName);
+    setSaveState("saving");
+    const { error } = await supabase.from("plans").update({ name: nextName }).eq("id", planId);
+    if (error) {
+      toast.error("Couldn't save plan name.");
+      setSaveState("idle");
+    } else {
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 1500);
+    }
+  };
 
   if (authLoading || !session || !planId) {
     return (
@@ -217,7 +237,7 @@ function PlanWizardPage() {
         ) : step === 3 ? (
           <Step3Profile value={profile} onChange={setProfile} />
         ) : step === 4 ? (
-          <Step4Plan finances={finances} home={home} profile={profile} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
+          <Step4Plan finances={finances} home={home} profile={profile} planName={planName} onPlanNameChange={(name) => void updatePlanName(name)} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
         ) : (
           <ComingSoon step={step} />
         )}
@@ -263,8 +283,8 @@ function PlanWizardPage() {
               <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button size="lg" disabled>
-              Finish
+            <Button size="lg" onClick={() => goToStep(1)}>
+              Edit Plan
             </Button>
           )}
         </div>}

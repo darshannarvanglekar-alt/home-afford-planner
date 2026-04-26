@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Home, LogOut, User as UserIcon, Plus, FileText, Settings } from "lucide-react";
+import { FileText, FolderOpen, Home, LogOut, MoreVertical, Pencil, Plus, Settings, Trash2, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +13,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { UpgradeModal } from "@/components/plan/UpgradeModal";
 import { useAuth } from "@/lib/auth";
 import { FREE_PLAN_LIMITS, LAUNCH_MODE, hasProAccess } from "@/lib/subscription";
+import { formatINR } from "@/lib/plan-schema";
+import { parsePlanData, propertyTypeLabel, timeAgo } from "@/lib/plan-display";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/dashboard")({
@@ -42,6 +56,8 @@ interface PlanRow {
   status: string;
   verdict: string | null;
   created_at: string;
+  updated_at: string;
+  data: unknown;
 }
 
 function greeting() {
@@ -57,6 +73,9 @@ function DashboardPage() {
   const [profile, setProfile] = React.useState<ProfileRow | null>(null);
   const [plans, setPlans] = React.useState<PlanRow[] | null>(null);
   const [upgradeOpen, setUpgradeOpen] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<PlanRow | null>(null);
+  const [renamingPlanId, setRenamingPlanId] = React.useState<string | null>(null);
+  const [renameValue, setRenameValue] = React.useState("");
 
   // Protect route
   React.useEffect(() => {
@@ -79,8 +98,8 @@ function DashboardPage() {
           .maybeSingle(),
         supabase
           .from("plans")
-          .select("id, name, status, verdict, created_at")
-          .order("created_at", { ascending: false }),
+          .select("id, name, status, verdict, created_at, updated_at, data")
+          .order("updated_at", { ascending: false }),
       ]);
 
       if (cancelled) return;
@@ -111,6 +130,25 @@ function DashboardPage() {
       return;
     }
     navigate({ to: "/plan/new", search: { step: 1, planId: undefined } });
+  };
+
+  const openPlan = (planId: string) => navigate({ to: "/plan/new", search: { step: 4, planId } });
+
+  const saveRename = async (planId: string) => {
+    const nextName = renameValue.trim() || "Untitled plan";
+    setPlans((current) => current?.map((p) => (p.id === planId ? { ...p, name: nextName } : p)) ?? current);
+    setRenamingPlanId(null);
+    const { error } = await supabase.from("plans").update({ name: nextName }).eq("id", planId);
+    if (error) toast.error("Couldn't rename plan.");
+  };
+
+  const deletePlan = async () => {
+    if (!deleteTarget) return;
+    const targetId = deleteTarget.id;
+    setDeleteTarget(null);
+    setPlans((current) => current?.filter((p) => p.id !== targetId) ?? current);
+    const { error } = await supabase.from("plans").delete().eq("id", targetId);
+    if (error) toast.error("Couldn't delete plan.");
   };
 
   if (authLoading || !session) {
@@ -244,28 +282,78 @@ function DashboardPage() {
               </div>
             ) : (
               <ul className="grid gap-3">
-                {plans.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-soft"
-                  >
-                    <div>
-                      <div className="font-medium text-foreground">{p.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {p.status}
-                        {p.verdict ? ` · ${p.verdict}` : ""}
+                {plans.map((p) => {
+                  const parsed = parsePlanData(p.data);
+                  const verdict = parsed.verdict;
+                  const verdictClass = verdict === "safe" ? "bg-success-soft text-success-soft-foreground border-success/20" : verdict === "stretch" ? "bg-warning-soft text-warning-soft-foreground border-warning/20" : "bg-danger-soft text-danger-soft-foreground border-destructive/20";
+                  return (
+                    <li key={p.id} className="rounded-xl border border-border bg-card p-4 shadow-soft">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          {renamingPlanId === p.id ? (
+                            <Input
+                              value={renameValue}
+                              autoFocus
+                              onChange={(event) => setRenameValue(event.target.value)}
+                              onBlur={() => void saveRename(p.id)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") void saveRename(p.id);
+                                if (event.key === "Escape") setRenamingPlanId(null);
+                              }}
+                            />
+                          ) : (
+                            <div className="truncate text-lg font-extrabold text-foreground">{p.name}</div>
+                          )}
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <Badge variant="outline">{propertyTypeLabel(parsed.home.propertyType)}</Badge>
+                            <Badge variant="secondary">{formatINR(parsed.home.propertyCost)}</Badge>
+                            <Badge className={verdictClass}>{verdict.toUpperCase()}</Badge>
+                          </div>
+                          <p className="mt-3 text-xs text-muted-foreground">Last updated: {timeAgo(p.updated_at)}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => openPlan(p.id)}>
+                            Open
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" aria-label={`Plan actions for ${p.name}`}>
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem onClick={() => openPlan(p.id)}><FolderOpen className="h-4 w-4" />Open Plan</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => { setRenamingPlanId(p.id); setRenameValue(p.name); }}><Pencil className="h-4 w-4" />Rename Plan</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTarget(p)}><Trash2 className="h-4 w-4" />Delete Plan</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                    </div>
-                    <Button variant="outline" size="sm" disabled>
-                      Open
-                    </Button>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
         </section>
       </main>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete plan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete '{deleteTarget?.name}'? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => void deletePlan()}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <UpgradeModal
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
