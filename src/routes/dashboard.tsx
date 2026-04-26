@@ -56,6 +56,8 @@ interface PlanRow {
   status: string;
   verdict: string | null;
   created_at: string;
+  updated_at: string;
+  data: unknown;
 }
 
 function greeting() {
@@ -71,6 +73,9 @@ function DashboardPage() {
   const [profile, setProfile] = React.useState<ProfileRow | null>(null);
   const [plans, setPlans] = React.useState<PlanRow[] | null>(null);
   const [upgradeOpen, setUpgradeOpen] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<PlanRow | null>(null);
+  const [renamingPlanId, setRenamingPlanId] = React.useState<string | null>(null);
+  const [renameValue, setRenameValue] = React.useState("");
 
   // Protect route
   React.useEffect(() => {
@@ -93,8 +98,8 @@ function DashboardPage() {
           .maybeSingle(),
         supabase
           .from("plans")
-          .select("id, name, status, verdict, created_at")
-          .order("created_at", { ascending: false }),
+          .select("id, name, status, verdict, created_at, updated_at, data")
+          .order("updated_at", { ascending: false }),
       ]);
 
       if (cancelled) return;
@@ -125,6 +130,25 @@ function DashboardPage() {
       return;
     }
     navigate({ to: "/plan/new", search: { step: 1, planId: undefined } });
+  };
+
+  const openPlan = (planId: string) => navigate({ to: "/plan/new", search: { step: 4, planId } });
+
+  const saveRename = async (planId: string) => {
+    const nextName = renameValue.trim() || "Untitled plan";
+    setPlans((current) => current?.map((p) => (p.id === planId ? { ...p, name: nextName } : p)) ?? current);
+    setRenamingPlanId(null);
+    const { error } = await supabase.from("plans").update({ name: nextName }).eq("id", planId);
+    if (error) toast.error("Couldn't rename plan.");
+  };
+
+  const deletePlan = async () => {
+    if (!deleteTarget) return;
+    const targetId = deleteTarget.id;
+    setDeleteTarget(null);
+    setPlans((current) => current?.filter((p) => p.id !== targetId) ?? current);
+    const { error } = await supabase.from("plans").delete().eq("id", targetId);
+    if (error) toast.error("Couldn't delete plan.");
   };
 
   if (authLoading || !session) {
