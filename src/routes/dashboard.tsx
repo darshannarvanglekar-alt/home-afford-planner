@@ -282,28 +282,78 @@ function DashboardPage() {
               </div>
             ) : (
               <ul className="grid gap-3">
-                {plans.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-soft"
-                  >
-                    <div>
-                      <div className="font-medium text-foreground">{p.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {p.status}
-                        {p.verdict ? ` · ${p.verdict}` : ""}
+                {plans.map((p) => {
+                  const parsed = parsePlanData(p.data);
+                  const verdict = parsed.verdict;
+                  const verdictClass = verdict === "safe" ? "bg-success-soft text-success-soft-foreground border-success/20" : verdict === "stretch" ? "bg-warning-soft text-warning-soft-foreground border-warning/20" : "bg-danger-soft text-danger-soft-foreground border-destructive/20";
+                  return (
+                    <li key={p.id} className="rounded-xl border border-border bg-card p-4 shadow-soft">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          {renamingPlanId === p.id ? (
+                            <Input
+                              value={renameValue}
+                              autoFocus
+                              onChange={(event) => setRenameValue(event.target.value)}
+                              onBlur={() => void saveRename(p.id)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") void saveRename(p.id);
+                                if (event.key === "Escape") setRenamingPlanId(null);
+                              }}
+                            />
+                          ) : (
+                            <div className="truncate text-lg font-extrabold text-foreground">{p.name}</div>
+                          )}
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <Badge variant="outline">{propertyTypeLabel(parsed.home.propertyType)}</Badge>
+                            <Badge variant="secondary">{formatINR(parsed.home.propertyCost)}</Badge>
+                            <Badge className={verdictClass}>{verdict.toUpperCase()}</Badge>
+                          </div>
+                          <p className="mt-3 text-xs text-muted-foreground">Last updated: {timeAgo(p.updated_at)}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => openPlan(p.id)}>
+                            Open
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" aria-label={`Plan actions for ${p.name}`}>
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem onClick={() => openPlan(p.id)}><FolderOpen className="h-4 w-4" />Open Plan</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => { setRenamingPlanId(p.id); setRenameValue(p.name); }}><Pencil className="h-4 w-4" />Rename Plan</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTarget(p)}><Trash2 className="h-4 w-4" />Delete Plan</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                    </div>
-                    <Button variant="outline" size="sm" disabled>
-                      Open
-                    </Button>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
         </section>
       </main>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete plan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete '{deleteTarget?.name}'? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => void deletePlan()}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <UpgradeModal
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
