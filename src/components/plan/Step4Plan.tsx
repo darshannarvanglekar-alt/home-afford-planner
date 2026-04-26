@@ -1,7 +1,8 @@
 import * as React from "react";
-import { AlertCircle, ChevronDown, Loader2, RefreshCw, ShieldCheck, TriangleAlert } from "lucide-react";
+import { AlertCircle, ChevronDown, Loader2, Pencil, RefreshCw, ShieldCheck, TriangleAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { proBadgeText } from "@/lib/subscription";
@@ -21,12 +22,16 @@ interface Props {
   finances: Finances;
   home: Home;
   profile: Profile;
+  planName?: string;
+  onPlanNameChange?: (name: string) => void;
   canUseProFeatures?: boolean;
   onUpgradeRequired?: (message: string) => void;
 }
 
-export function Step4Plan({ finances, home, profile, canUseProFeatures = true, onUpgradeRequired }: Props) {
+export function Step4Plan({ finances, home, profile, planName = "", onPlanNameChange, canUseProFeatures = true, onUpgradeRequired }: Props) {
   const [open, setOpen] = React.useState(true);
+  const [editingName, setEditingName] = React.useState(false);
+  const [draftName, setDraftName] = React.useState(planName);
   const plan = calculateAffordabilityPlan(finances, home, profile);
   const verdictTone = {
     safe: {
@@ -54,12 +59,37 @@ export function Step4Plan({ finances, home, profile, canUseProFeatures = true, o
         ? "text-warning"
         : "text-destructive";
 
+  React.useEffect(() => setDraftName(planName), [planName]);
+
+  const commitName = () => {
+    onPlanNameChange?.(draftName.trim());
+    setEditingName(false);
+  };
+
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
-          Your affordability plan
-        </h1>
+        {editingName ? (
+          <Input
+            value={draftName}
+            autoFocus
+            placeholder="Click to name your plan"
+            className="h-auto border-0 px-0 py-1 text-2xl font-extrabold tracking-tight shadow-none focus-visible:ring-0 sm:text-3xl"
+            onChange={(event) => setDraftName(event.target.value)}
+            onBlur={commitName}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") commitName();
+              if (event.key === "Escape") setEditingName(false);
+            }}
+          />
+        ) : (
+          <button type="button" className="flex max-w-full items-center gap-2 text-left" onClick={() => setEditingName(true)}>
+            <h1 className="truncate text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+              {planName || "Click to name your plan"}
+            </h1>
+            <Pencil className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </button>
+        )}
         <p className="mt-2 text-sm text-muted-foreground">
           Here is how this home purchase fits your monthly cash flow.
         </p>
