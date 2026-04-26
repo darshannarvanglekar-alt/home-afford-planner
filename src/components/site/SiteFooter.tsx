@@ -15,6 +15,9 @@ export function SiteFooter() {
           </div>
 
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+            <Link to="/pricing" className="hover:text-foreground">
+              Pricing
+            </Link>
             <a href="#" className="hover:text-foreground">
               Privacy Policy
             </a>
