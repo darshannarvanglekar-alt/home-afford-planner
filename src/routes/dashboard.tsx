@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Home, LogOut, User as UserIcon, Plus, FileText } from "lucide-react";
+import { Home, LogOut, User as UserIcon, Plus, FileText, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UpgradeModal } from "@/components/plan/UpgradeModal";
 import { useAuth } from "@/lib/auth";
+import { FREE_PLAN_LIMITS, LAUNCH_MODE, hasProAccess } from "@/lib/subscription";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/dashboard")({
@@ -51,9 +53,10 @@ function greeting() {
 
 function DashboardPage() {
   const navigate = useNavigate();
-  const { user, session, loading: authLoading, signOut } = useAuth();
+  const { user, session, subscription, loading: authLoading, signOut } = useAuth();
   const [profile, setProfile] = React.useState<ProfileRow | null>(null);
   const [plans, setPlans] = React.useState<PlanRow[] | null>(null);
+  const [upgradeOpen, setUpgradeOpen] = React.useState(false);
 
   // Protect route
   React.useEffect(() => {
@@ -99,6 +102,15 @@ function DashboardPage() {
     await signOut();
     toast.success("Signed out.");
     navigate({ to: "/" });
+  };
+
+  const handleStartPlan = () => {
+    const planCount = plans?.length ?? 0;
+    if (!hasProAccess(subscription) && planCount >= FREE_PLAN_LIMITS.savedPlans) {
+      setUpgradeOpen(true);
+      return;
+    }
+    navigate({ to: "/plan/new", search: { step: 1, planId: undefined } });
   };
 
   if (authLoading || !session) {
@@ -153,6 +165,10 @@ function DashboardPage() {
                 <UserIcon className="h-4 w-4" />
                 Profile
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate({ to: "/settings" })}>
+                <Settings className="h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
@@ -173,6 +189,12 @@ function DashboardPage() {
           </p>
         </div>
 
+        {LAUNCH_MODE && (
+          <div className="mt-6 rounded-2xl border border-primary/20 bg-primary-soft px-4 py-3 text-sm font-semibold text-primary-soft-foreground shadow-soft">
+            🎉 All Pro features are free during our launch month. Enjoy unlimited access!
+          </div>
+        )}
+
         {/* Start a new plan */}
         <section className="mt-8">
           <div className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-primary-soft via-card to-card p-6 shadow-card sm:p-8">
@@ -191,7 +213,7 @@ function DashboardPage() {
               <Button
                 size="lg"
                 className="w-full sm:w-auto"
-                onClick={() => navigate({ to: "/plan/new", search: { step: 1, planId: undefined } })}
+                onClick={handleStartPlan}
               >
                 <Plus className="h-4 w-4" />
                 Start New Plan
@@ -244,6 +266,11 @@ function DashboardPage() {
           </div>
         </section>
       </main>
+      <UpgradeModal
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        message="You've used your 1 free plan. Upgrade to Pro for unlimited plans."
+      />
     </div>
   );
 }
