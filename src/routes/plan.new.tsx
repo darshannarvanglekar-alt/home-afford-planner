@@ -11,7 +11,9 @@ import { Step2Home } from "@/components/plan/Step2Home";
 import { Step3Profile } from "@/components/plan/Step3Profile";
 import { Step4Plan } from "@/components/plan/Step4Plan";
 import { Progress } from "@/components/ui/progress";
+import { UpgradeModal } from "@/components/plan/UpgradeModal";
 import { useAuth } from "@/lib/auth";
+import { hasProAccess } from "@/lib/subscription";
 import { supabase } from "@/integrations/supabase/client";
 import {
   defaultFinances,
@@ -43,7 +45,7 @@ export const Route = createFileRoute("/plan/new")({
 
 function PlanWizardPage() {
   const navigate = useNavigate();
-  const { user, session, loading: authLoading } = useAuth();
+  const { user, session, subscription, loading: authLoading } = useAuth();
   const { step, planId } = Route.useSearch();
 
   const [finances, setFinances] = React.useState<Finances>(defaultFinances);
@@ -52,6 +54,7 @@ function PlanWizardPage() {
   const [planReady, setPlanReady] = React.useState(false);
   const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved">("idle");
   const [calculating, setCalculating] = React.useState(false);
+  const [upgradeMessage, setUpgradeMessage] = React.useState("");
 
   // Auth guard
   React.useEffect(() => {
@@ -187,6 +190,9 @@ function PlanWizardPage() {
     }, 2300);
   };
 
+  const requestUpgrade = (message: string) => setUpgradeMessage(message);
+  const canUseProFeatures = hasProAccess(subscription);
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-30 w-full border-b border-border bg-background/85 backdrop-blur">
@@ -205,13 +211,13 @@ function PlanWizardPage() {
         {calculating ? (
           <CalculatingPlan />
         ) : step === 1 ? (
-          <Step1Finances value={finances} onChange={setFinances} />
+          <Step1Finances value={finances} onChange={setFinances} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
         ) : step === 2 ? (
-          <Step2Home value={home} onChange={setHome} />
+          <Step2Home value={home} onChange={setHome} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
         ) : step === 3 ? (
           <Step3Profile value={profile} onChange={setProfile} />
         ) : step === 4 ? (
-          <Step4Plan finances={finances} home={home} profile={profile} />
+          <Step4Plan finances={finances} home={home} profile={profile} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
         ) : (
           <ComingSoon step={step} />
         )}
@@ -263,6 +269,7 @@ function PlanWizardPage() {
           )}
         </div>}
       </main>
+      <UpgradeModal open={!!upgradeMessage} onOpenChange={(open) => !open && setUpgradeMessage("")} message={upgradeMessage} />
     </div>
   );
 }

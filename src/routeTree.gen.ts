@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
@@ -19,6 +21,16 @@ import { Route as ApiCreateRazorpaySubscriptionRouteImport } from './routes/api.
 import { Route as ApiConfirmRazorpaySubscriptionRouteImport } from './routes/api.confirm-razorpay-subscription'
 import { Route as ApiAnalyzeBankStatementRouteImport } from './routes/api.analyze-bank-statement'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -73,6 +85,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
   '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
   '/api/confirm-razorpay-subscription': typeof ApiConfirmRazorpaySubscriptionRoute
   '/api/create-razorpay-subscription': typeof ApiCreateRazorpaySubscriptionRoute
@@ -84,6 +98,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
   '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
   '/api/confirm-razorpay-subscription': typeof ApiConfirmRazorpaySubscriptionRoute
   '/api/create-razorpay-subscription': typeof ApiCreateRazorpaySubscriptionRoute
@@ -96,6 +112,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
   '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
   '/api/confirm-razorpay-subscription': typeof ApiConfirmRazorpaySubscriptionRoute
   '/api/create-razorpay-subscription': typeof ApiCreateRazorpaySubscriptionRoute
@@ -109,6 +127,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/pricing'
+    | '/settings'
     | '/api/analyze-bank-statement'
     | '/api/confirm-razorpay-subscription'
     | '/api/create-razorpay-subscription'
@@ -120,6 +140,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/pricing'
+    | '/settings'
     | '/api/analyze-bank-statement'
     | '/api/confirm-razorpay-subscription'
     | '/api/create-razorpay-subscription'
@@ -131,6 +153,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/pricing'
+    | '/settings'
     | '/api/analyze-bank-statement'
     | '/api/confirm-razorpay-subscription'
     | '/api/create-razorpay-subscription'
@@ -143,6 +167,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
+  PricingRoute: typeof PricingRoute
+  SettingsRoute: typeof SettingsRoute
   ApiAnalyzeBankStatementRoute: typeof ApiAnalyzeBankStatementRoute
   ApiConfirmRazorpaySubscriptionRoute: typeof ApiConfirmRazorpaySubscriptionRoute
   ApiCreateRazorpaySubscriptionRoute: typeof ApiCreateRazorpaySubscriptionRoute
@@ -153,6 +179,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -223,6 +263,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
+  PricingRoute: PricingRoute,
+  SettingsRoute: SettingsRoute,
   ApiAnalyzeBankStatementRoute: ApiAnalyzeBankStatementRoute,
   ApiConfirmRazorpaySubscriptionRoute: ApiConfirmRazorpaySubscriptionRoute,
   ApiCreateRazorpaySubscriptionRoute: ApiCreateRazorpaySubscriptionRoute,
