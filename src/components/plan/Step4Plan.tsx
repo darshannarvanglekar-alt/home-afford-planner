@@ -25,7 +25,7 @@ interface Props {
   onUpgradeRequired?: (message: string) => void;
 }
 
-export function Step4Plan({ finances, home, profile }: Props) {
+export function Step4Plan({ finances, home, profile, canUseProFeatures = true, onUpgradeRequired }: Props) {
   const [open, setOpen] = React.useState(true);
   const plan = calculateAffordabilityPlan(finances, home, profile);
   const verdictTone = {
@@ -97,7 +97,7 @@ export function Step4Plan({ finances, home, profile }: Props) {
         <MetricCard label="Emergency Fund Needed" value={formatINR(plan.emergencyFundNeeded)} />
       </section>
 
-      <SmartSuggestionsPanel finances={finances} home={home} profile={profile} canUseProFeatures={arguments[0].canUseProFeatures} onUpgradeRequired={arguments[0].onUpgradeRequired} />
+      <SmartSuggestionsPanel finances={finances} home={home} profile={profile} canUseProFeatures={canUseProFeatures} onUpgradeRequired={onUpgradeRequired} />
 
       <section className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
         <Button
@@ -139,7 +139,7 @@ interface SmartSuggestion {
   type: SuggestionType;
 }
 
-function SmartSuggestionsPanel({ finances, home, profile }: Props) {
+function SmartSuggestionsPanel({ finances, home, profile, canUseProFeatures = true, onUpgradeRequired }: Props) {
   const [suggestions, setSuggestions] = React.useState<SmartSuggestion[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
@@ -199,11 +199,11 @@ function SmartSuggestionsPanel({ finances, home, profile }: Props) {
   }, [finances, home, profile, plan.emiToIncomePct, plan.emergencyFundNeeded, plan.newEmi, plan.surplusAfterEmi, plan.totalIncome, plan.verdict]);
 
   React.useEffect(() => {
-    if (!arguments[0].canUseProFeatures) return;
+    if (!canUseProFeatures) return;
     void generateSuggestions();
-  }, [generateSuggestions]);
+  }, [canUseProFeatures, generateSuggestions]);
 
-  if (!arguments[0].canUseProFeatures) {
+  if (!canUseProFeatures) {
     return (
       <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
         <div className="pointer-events-none select-none blur-sm">
@@ -221,7 +221,7 @@ function SmartSuggestionsPanel({ finances, home, profile }: Props) {
         <div className="absolute inset-0 flex items-center justify-center bg-background/70 p-6 backdrop-blur-sm">
           <div className="max-w-sm text-center">
             <p className="text-lg font-extrabold text-foreground">✨ Upgrade to Pro to unlock personalised AI suggestions for your plan.</p>
-            <Button type="button" className="mt-4" onClick={() => arguments[0].onUpgradeRequired?.("AI personalised suggestions are a Pro feature.")}>Upgrade to Pro</Button>
+            <Button type="button" className="mt-4" onClick={() => onUpgradeRequired?.("AI personalised suggestions are a Pro feature.")}>Upgrade to Pro</Button>
           </div>
         </div>
       </section>
