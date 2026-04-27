@@ -1,5 +1,6 @@
 import * as React from "react";
-import { AlertCircle, ChevronDown, Loader2, Pencil, RefreshCw, ShieldCheck, TriangleAlert } from "lucide-react";
+import { AlertCircle, ChevronDown, GitCompareArrows, Loader2, Pencil, RefreshCw, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,6 +127,13 @@ export function Step4Plan({ finances, home, profile, planName = "", onPlanNameCh
         />
         <MetricCard label="Emergency Fund Needed" value={formatINR(plan.emergencyFundNeeded)} />
       </section>
+
+      <Button type="button" variant="outline" className="w-full" asChild>
+        <Link to="/compare">
+          <GitCompareArrows className="h-4 w-4" />
+          Compare with Another Property
+        </Link>
+      </Button>
 
       <SmartSuggestionsPanel finances={finances} home={home} profile={profile} canUseProFeatures={canUseProFeatures} onUpgradeRequired={onUpgradeRequired} />
 

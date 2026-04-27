@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CompareRouteImport } from './routes/compare'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlanNewRouteImport } from './routes/plan.new'
@@ -35,6 +36,11 @@ const PricingRoute = PricingRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareRoute = CompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -91,6 +97,7 @@ const ApiAnalyzeBankStatementRoute = ApiAnalyzeBankStatementRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/compare': typeof CompareRoute
   '/dashboard': typeof DashboardRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/compare': typeof CompareRoute
   '/dashboard': typeof DashboardRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/compare': typeof CompareRoute
   '/dashboard': typeof DashboardRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/compare'
     | '/dashboard'
     | '/pricing'
     | '/settings'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/compare'
     | '/dashboard'
     | '/pricing'
     | '/settings'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/auth'
+    | '/compare'
     | '/dashboard'
     | '/pricing'
     | '/settings'
@@ -179,6 +191,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  CompareRoute: typeof CompareRoute
   DashboardRoute: typeof DashboardRoute
   PricingRoute: typeof PricingRoute
   SettingsRoute: typeof SettingsRoute
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare': {
+      id: '/compare'
+      path: '/compare'
+      fullPath: '/compare'
+      preLoaderRoute: typeof CompareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -283,6 +303,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  CompareRoute: CompareRoute,
   DashboardRoute: DashboardRoute,
   PricingRoute: PricingRoute,
   SettingsRoute: SettingsRoute,
