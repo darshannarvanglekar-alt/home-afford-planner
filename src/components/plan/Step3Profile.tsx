@@ -71,6 +71,12 @@ export function Step3Profile({ value, onChange }: Props) {
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) =>
     onChange({ ...value, [k]: v });
 
+  React.useEffect(() => {
+    if (!value.emergencyFundPref) {
+      onChange({ ...value, emergencyFundPref: "balanced" });
+    }
+  }, [value, onChange]);
+
   const recommendation = recommendEmergencyFund(value);
   const recLabel = recommendation === "conservative" ? "CONSERVATIVE" : "BALANCED";
 
@@ -258,6 +264,9 @@ export function Step3Profile({ value, onChange }: Props) {
             Based on your profile, we recommend:{" "}
             <span className="font-semibold text-primary">{recLabel}</span>
           </span>
+        </div>
+        <div className="mt-3 rounded-xl bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
+          We've selected Balanced as your emergency fund mode. You can change this anytime.
         </div>
       </section>
 
