@@ -18,12 +18,12 @@ export function SiteFooter() {
             <Link to="/pricing" className="hover:text-foreground">
               Pricing
             </Link>
-            <a href="#" className="hover:text-foreground">
+            <Link to="/privacy" className="hover:text-foreground">
               Privacy Policy
-            </a>
-            <a href="#" className="hover:text-foreground">
+            </Link>
+            <Link to="/terms" className="hover:text-foreground">
               Terms of Service
-            </a>
+            </Link>
             <a href="#" className="hover:text-foreground">
               Contact
             </a>
