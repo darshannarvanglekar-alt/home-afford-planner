@@ -12,10 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CompareRouteImport } from './routes/compare'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlanNewRouteImport } from './routes/plan.new'
 import { Route as ApiGeneratePlanSuggestionsRouteImport } from './routes/api.generate-plan-suggestions'
+import { Route as ApiGenerateComparisonSummaryRouteImport } from './routes/api.generate-comparison-summary'
 import { Route as ApiExtractBuilderPaymentPlanRouteImport } from './routes/api.extract-builder-payment-plan'
 import { Route as ApiCreateRazorpaySubscriptionRouteImport } from './routes/api.create-razorpay-subscription'
 import { Route as ApiConfirmRazorpaySubscriptionRouteImport } from './routes/api.confirm-razorpay-subscription'
@@ -34,6 +36,11 @@ const PricingRoute = PricingRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareRoute = CompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -55,6 +62,12 @@ const ApiGeneratePlanSuggestionsRoute =
   ApiGeneratePlanSuggestionsRouteImport.update({
     id: '/api/generate-plan-suggestions',
     path: '/api/generate-plan-suggestions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiGenerateComparisonSummaryRoute =
+  ApiGenerateComparisonSummaryRouteImport.update({
+    id: '/api/generate-comparison-summary',
+    path: '/api/generate-comparison-summary',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiExtractBuilderPaymentPlanRoute =
@@ -84,6 +97,7 @@ const ApiAnalyzeBankStatementRoute = ApiAnalyzeBankStatementRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/compare': typeof CompareRoute
   '/dashboard': typeof DashboardRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
@@ -91,12 +105,14 @@ export interface FileRoutesByFullPath {
   '/api/confirm-razorpay-subscription': typeof ApiConfirmRazorpaySubscriptionRoute
   '/api/create-razorpay-subscription': typeof ApiCreateRazorpaySubscriptionRoute
   '/api/extract-builder-payment-plan': typeof ApiExtractBuilderPaymentPlanRoute
+  '/api/generate-comparison-summary': typeof ApiGenerateComparisonSummaryRoute
   '/api/generate-plan-suggestions': typeof ApiGeneratePlanSuggestionsRoute
   '/plan/new': typeof PlanNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/compare': typeof CompareRoute
   '/dashboard': typeof DashboardRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
@@ -104,6 +120,7 @@ export interface FileRoutesByTo {
   '/api/confirm-razorpay-subscription': typeof ApiConfirmRazorpaySubscriptionRoute
   '/api/create-razorpay-subscription': typeof ApiCreateRazorpaySubscriptionRoute
   '/api/extract-builder-payment-plan': typeof ApiExtractBuilderPaymentPlanRoute
+  '/api/generate-comparison-summary': typeof ApiGenerateComparisonSummaryRoute
   '/api/generate-plan-suggestions': typeof ApiGeneratePlanSuggestionsRoute
   '/plan/new': typeof PlanNewRoute
 }
@@ -111,6 +128,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/compare': typeof CompareRoute
   '/dashboard': typeof DashboardRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
@@ -118,6 +136,7 @@ export interface FileRoutesById {
   '/api/confirm-razorpay-subscription': typeof ApiConfirmRazorpaySubscriptionRoute
   '/api/create-razorpay-subscription': typeof ApiCreateRazorpaySubscriptionRoute
   '/api/extract-builder-payment-plan': typeof ApiExtractBuilderPaymentPlanRoute
+  '/api/generate-comparison-summary': typeof ApiGenerateComparisonSummaryRoute
   '/api/generate-plan-suggestions': typeof ApiGeneratePlanSuggestionsRoute
   '/plan/new': typeof PlanNewRoute
 }
@@ -126,6 +145,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/compare'
     | '/dashboard'
     | '/pricing'
     | '/settings'
@@ -133,12 +153,14 @@ export interface FileRouteTypes {
     | '/api/confirm-razorpay-subscription'
     | '/api/create-razorpay-subscription'
     | '/api/extract-builder-payment-plan'
+    | '/api/generate-comparison-summary'
     | '/api/generate-plan-suggestions'
     | '/plan/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/compare'
     | '/dashboard'
     | '/pricing'
     | '/settings'
@@ -146,12 +168,14 @@ export interface FileRouteTypes {
     | '/api/confirm-razorpay-subscription'
     | '/api/create-razorpay-subscription'
     | '/api/extract-builder-payment-plan'
+    | '/api/generate-comparison-summary'
     | '/api/generate-plan-suggestions'
     | '/plan/new'
   id:
     | '__root__'
     | '/'
     | '/auth'
+    | '/compare'
     | '/dashboard'
     | '/pricing'
     | '/settings'
@@ -159,6 +183,7 @@ export interface FileRouteTypes {
     | '/api/confirm-razorpay-subscription'
     | '/api/create-razorpay-subscription'
     | '/api/extract-builder-payment-plan'
+    | '/api/generate-comparison-summary'
     | '/api/generate-plan-suggestions'
     | '/plan/new'
   fileRoutesById: FileRoutesById
@@ -166,6 +191,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  CompareRoute: typeof CompareRoute
   DashboardRoute: typeof DashboardRoute
   PricingRoute: typeof PricingRoute
   SettingsRoute: typeof SettingsRoute
@@ -173,6 +199,7 @@ export interface RootRouteChildren {
   ApiConfirmRazorpaySubscriptionRoute: typeof ApiConfirmRazorpaySubscriptionRoute
   ApiCreateRazorpaySubscriptionRoute: typeof ApiCreateRazorpaySubscriptionRoute
   ApiExtractBuilderPaymentPlanRoute: typeof ApiExtractBuilderPaymentPlanRoute
+  ApiGenerateComparisonSummaryRoute: typeof ApiGenerateComparisonSummaryRoute
   ApiGeneratePlanSuggestionsRoute: typeof ApiGeneratePlanSuggestionsRoute
   PlanNewRoute: typeof PlanNewRoute
 }
@@ -198,6 +225,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare': {
+      id: '/compare'
+      path: '/compare'
+      fullPath: '/compare'
+      preLoaderRoute: typeof CompareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -226,6 +260,13 @@ declare module '@tanstack/react-router' {
       path: '/api/generate-plan-suggestions'
       fullPath: '/api/generate-plan-suggestions'
       preLoaderRoute: typeof ApiGeneratePlanSuggestionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/generate-comparison-summary': {
+      id: '/api/generate-comparison-summary'
+      path: '/api/generate-comparison-summary'
+      fullPath: '/api/generate-comparison-summary'
+      preLoaderRoute: typeof ApiGenerateComparisonSummaryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/extract-builder-payment-plan': {
@@ -262,6 +303,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  CompareRoute: CompareRoute,
   DashboardRoute: DashboardRoute,
   PricingRoute: PricingRoute,
   SettingsRoute: SettingsRoute,
@@ -269,6 +311,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiConfirmRazorpaySubscriptionRoute: ApiConfirmRazorpaySubscriptionRoute,
   ApiCreateRazorpaySubscriptionRoute: ApiCreateRazorpaySubscriptionRoute,
   ApiExtractBuilderPaymentPlanRoute: ApiExtractBuilderPaymentPlanRoute,
+  ApiGenerateComparisonSummaryRoute: ApiGenerateComparisonSummaryRoute,
   ApiGeneratePlanSuggestionsRoute: ApiGeneratePlanSuggestionsRoute,
   PlanNewRoute: PlanNewRoute,
 }

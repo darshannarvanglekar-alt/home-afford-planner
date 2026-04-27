@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { FileText, FolderOpen, Home, LogOut, MoreVertical, Pencil, Plus, Settings, Trash2, User as UserIcon } from "lucide-react";
+import { FileText, FolderOpen, GitCompareArrows, Home, LogOut, MoreVertical, Pencil, Plus, Settings, Trash2, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -248,14 +248,22 @@ function DashboardPage() {
                   </p>
                 </div>
               </div>
-              <Button
-                size="lg"
-                className="w-full sm:w-auto"
-                onClick={handleStartPlan}
-              >
-                <Plus className="h-4 w-4" />
-                Start New Plan
-              </Button>
+              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto"
+                  onClick={handleStartPlan}
+                >
+                  <Plus className="h-4 w-4" />
+                  Start New Plan
+                </Button>
+                <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
+                  <Link to="/compare" search={{ planA: undefined }}>
+                    <GitCompareArrows className="h-4 w-4" />
+                    Compare Properties
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </section>
@@ -323,6 +331,7 @@ function DashboardPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
                               <DropdownMenuItem onClick={() => openPlan(p.id)}><FolderOpen className="h-4 w-4" />Open Plan</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate({ to: "/compare", search: { planA: p.id } })}><GitCompareArrows className="h-4 w-4" />Compare with another plan</DropdownMenuItem>
                               <DropdownMenuItem onClick={() => { setRenamingPlanId(p.id); setRenameValue(p.name); }}><Pencil className="h-4 w-4" />Rename Plan</DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTarget(p)}><Trash2 className="h-4 w-4" />Delete Plan</DropdownMenuItem>
