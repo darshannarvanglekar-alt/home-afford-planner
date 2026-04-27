@@ -129,7 +129,7 @@ export function Step4Plan({ finances, home, profile, planName = "", onPlanNameCh
       </section>
 
       <Button type="button" variant="outline" className="w-full" asChild>
-        <Link to="/compare">
+        <Link to="/compare" search={{ planA: undefined }}>
           <GitCompareArrows className="h-4 w-4" />
           Compare with Another Property
         </Link>

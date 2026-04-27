@@ -258,7 +258,7 @@ function DashboardPage() {
                   Start New Plan
                 </Button>
                 <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
-                  <Link to="/compare">
+                  <Link to="/compare" search={{ planA: undefined }}>
                     <GitCompareArrows className="h-4 w-4" />
                     Compare Properties
                   </Link>
