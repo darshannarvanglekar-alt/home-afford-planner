@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingLogo } from "@/components/LoadingLogo";
 import { useAuth } from "@/lib/auth";
 import { parsePlanData, propertyTypeLabel, suggestPlanName } from "@/lib/plan-display";
 import { cn } from "@/lib/utils";
@@ -104,7 +106,7 @@ function ComparePage() {
 
       if (cancelled) return;
       if (error) {
-        toast.error("Couldn't load saved plans.");
+        toast.error("Something went wrong. Please check your connection and try again.");
         setPlans([]);
         return;
       }
@@ -170,6 +172,7 @@ function ComparePage() {
       A: buildMetrics("Property A", sideA, sharedFinances, sharedProfile),
       B: buildMetrics("Property B", sideB, sharedFinances, sharedProfile),
     };
+    await new Promise((resolve) => window.setTimeout(resolve, 550));
     setResults(nextResults);
     setComparing(false);
     await generateSummary(nextResults);
@@ -192,7 +195,7 @@ function ComparePage() {
       if (!response.ok || !payload.summary) throw new Error(payload.error ?? "We couldn't generate the AI summary right now.");
       setSummary(payload.summary);
     } catch (error) {
-      setSummary(error instanceof Error ? error.message : "We couldn't generate the AI summary right now.");
+      setSummary("AI analysis is temporarily unavailable. Please fill in the details manually below.");
     } finally {
       setSummaryLoading(false);
     }
@@ -212,16 +215,12 @@ function ComparePage() {
       data: { finances: sharedFinances, home: selected.home, profile: sharedProfile },
     });
     setSavingSide(null);
-    if (error) toast.error("Couldn't save this property as a plan.");
-    else toast.success(`${name} saved as a plan.`);
+    if (error) toast.error("Something went wrong. Please check your connection and try again.");
+    else toast.success("✅ Plan saved successfully");
   };
 
   if (authLoading || !session || plans === null) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingLogo />;
   }
 
   return (
