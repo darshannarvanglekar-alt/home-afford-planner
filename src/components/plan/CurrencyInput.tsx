@@ -29,7 +29,7 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputPro
 
     return (
       <div className={cn("relative", className)}>
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+        <span className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-sm text-muted-foreground">
           ₹
         </span>
         <input
@@ -51,7 +51,7 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputPro
             const n = raw === "" ? 0 : Number.parseInt(raw, 10);
             onValueChange(Number.isFinite(n) ? n : 0);
           }}
-          className="flex h-10 w-full rounded-md border border-input bg-transparent pl-7 pr-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+          className="flex h-11 w-full min-w-0 rounded-md border border-input bg-transparent pl-8 pr-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
           {...props}
         />
       </div>

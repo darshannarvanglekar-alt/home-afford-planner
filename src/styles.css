@@ -179,4 +179,44 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  button,
+  [role="button"] {
+    min-height: 44px;
+  }
+}
+
+@keyframes homeafford-pulse {
+  0%, 100% { opacity: 0.78; transform: scale(0.98); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes homeafford-slide-left {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes homeafford-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@layer utilities {
+  .animate-logo-pulse {
+    animation: homeafford-pulse 1.6s ease-in-out infinite;
+  }
+
+  .animate-step-slide {
+    animation: homeafford-slide-left 200ms ease;
+  }
+
+  .hero-gradient-animated {
+    background: linear-gradient(120deg, var(--primary-soft), var(--background), var(--accent), var(--background));
+    background-size: 240% 240%;
+    animation: homeafford-gradient-shift 12s ease infinite;
+  }
 }

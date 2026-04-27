@@ -33,7 +33,7 @@ export function Step4Plan({ finances, home, profile, planName = "", onPlanNameCh
   const [open, setOpen] = React.useState(true);
   const [editingName, setEditingName] = React.useState(false);
   const [draftName, setDraftName] = React.useState(planName);
-  const plan = calculateAffordabilityPlan(finances, home, profile);
+  const plan = React.useMemo(() => calculateAffordabilityPlan(finances, home, profile), [finances, home, profile]);
   const verdictTone = {
     safe: {
       label: "SAFE",
@@ -99,7 +99,7 @@ export function Step4Plan({ finances, home, profile, planName = "", onPlanNameCh
       <section className={cn("rounded-2xl border p-5 shadow-soft sm:p-6", verdictTone.className)}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-background/55 px-3 py-1 text-sm font-extrabold">
+            <div className="inline-flex min-h-11 items-center gap-2 rounded-full bg-background/55 px-4 py-2 text-base font-extrabold sm:text-sm">
               <VerdictIcon className="h-4 w-4" />
               {verdictTone.label}
             </div>
@@ -113,7 +113,7 @@ export function Step4Plan({ finances, home, profile, planName = "", onPlanNameCh
         </ul>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard label="Monthly EMI" value={formatINR(plan.newEmi)} />
         <MetricCard
           label="Monthly Surplus"
@@ -149,8 +149,8 @@ export function Step4Plan({ finances, home, profile, planName = "", onPlanNameCh
         </Button>
         {open && (
           <div className="mt-5 space-y-5">
-            {plan.layerScores.map((layer) => (
-              <div key={layer.name} className="space-y-2">
+            {plan.layerScores.map((layer, index) => (
+              <div key={layer.name} className="space-y-2" title={layerTooltip(index)}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-foreground">{layer.name}</p>
@@ -282,7 +282,9 @@ function SmartSuggestionsPanel({ finances, home, profile, canUseProFeatures = tr
 
       <div className="mt-5 space-y-3">
         {loading ? (
-          Array.from({ length: 4 }).map((_, index) => (
+          <>
+          <p className="text-sm font-medium text-muted-foreground">Generating your personalised suggestions...</p>
+          {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="overflow-hidden rounded-xl border border-border bg-muted/40 p-4">
               <div className="mb-3 flex items-center gap-3">
                 <div className="h-8 w-8 animate-pulse rounded-full bg-primary/10" />
@@ -292,11 +294,11 @@ function SmartSuggestionsPanel({ finances, home, profile, canUseProFeatures = tr
                 <div className="h-3 w-full animate-pulse rounded bg-primary/10" />
                 <div className="h-3 w-5/6 animate-pulse rounded bg-primary/10" />
               </div>
-              <p className="mt-3 text-sm font-medium text-muted-foreground">Analysing your finances...</p>
             </div>
-          ))
+          ))}
+          </>
         ) : error ? (
-          <div className="rounded-xl border border-warning/20 bg-warning-soft p-4 text-sm font-medium text-warning-soft-foreground">{error}</div>
+          <div className="rounded-xl border border-warning/20 bg-warning-soft p-4 text-sm font-medium text-warning-soft-foreground">AI analysis is temporarily unavailable. Please fill in the details manually below.</div>
         ) : (
           suggestions.map((suggestion, index) => <SuggestionCard key={`${suggestion.title}-${index}`} suggestion={suggestion} />)
         )}
@@ -307,6 +309,16 @@ function SmartSuggestionsPanel({ finances, home, profile, canUseProFeatures = tr
       </p>
     </section>
   );
+}
+
+function layerTooltip(index: number) {
+  return [
+    "Checks if your income covers all essential expenses",
+    "Checks monthly cash flow after paying the new EMI",
+    "Checks if emergency fund stays protected",
+    "Checks if EMI is a safe percentage of your income",
+    "Checks if investments can continue after the purchase",
+  ][index] ?? "Explains this affordability layer";
 }
 
 function SuggestionCard({ suggestion }: { suggestion: SmartSuggestion }) {

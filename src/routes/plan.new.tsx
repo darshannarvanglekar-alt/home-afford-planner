@@ -12,6 +12,7 @@ import { Step3Profile } from "@/components/plan/Step3Profile";
 import { Step4Plan } from "@/components/plan/Step4Plan";
 import { Progress } from "@/components/ui/progress";
 import { UpgradeModal } from "@/components/plan/UpgradeModal";
+import { LoadingLogo } from "@/components/LoadingLogo";
 import { useAuth } from "@/lib/auth";
 import { hasProAccess } from "@/lib/subscription";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,6 +58,7 @@ function PlanWizardPage() {
   const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved">("idle");
   const [calculating, setCalculating] = React.useState(false);
   const [upgradeMessage, setUpgradeMessage] = React.useState("");
+  const [navDirection, setNavDirection] = React.useState<"next" | "back">("next");
 
   // Auth guard
   React.useEffect(() => {
@@ -157,9 +159,10 @@ function PlanWizardPage() {
       } else {
         setPlanName(nextName);
         setSaveState("saved");
+        toast.success("✅ Plan saved successfully");
         setTimeout(() => setSaveState("idle"), 1500);
       }
-    }, 600);
+    }, 1000);
 
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -177,16 +180,13 @@ function PlanWizardPage() {
       setSaveState("idle");
     } else {
       setSaveState("saved");
+      toast.success("✅ Plan renamed");
       setTimeout(() => setSaveState("idle"), 1500);
     }
   };
 
   if (authLoading || !session || !planId) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingLogo />;
   }
 
   const canGoNext =
@@ -196,11 +196,27 @@ function PlanWizardPage() {
         ? home.propertyCost > 0
         : true;
 
-  const goToStep = (nextStep: number) =>
+  const goToStep = (nextStep: number) => {
+    setNavDirection(nextStep > step ? "next" : "back");
     navigate({
       to: "/plan/new",
       search: { step: nextStep, planId },
     });
+  };
+
+  const validateStep = () => {
+    if (step === 1 && finances.income.primarySalary <= 0) {
+      toast.error("Please enter your monthly salary to continue");
+      return false;
+    }
+    if (step === 2) {
+      if (home.propertyCost <= 0) return toast.error("Please enter the property cost to continue"), false;
+      if (home.downPayment > home.propertyCost) return toast.error("Down payment cannot exceed property cost"), false;
+      if (home.interestRateA < 1 || home.interestRateA > 20) return toast.error("Please enter a valid interest rate between 1% and 20%"), false;
+      if (!home.tenureYears) return toast.error("Please select a loan tenure"), false;
+    }
+    return true;
+  };
 
   const calculatePlan = () => {
     setCalculating(true);
@@ -228,21 +244,22 @@ function PlanWizardPage() {
       </header>
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        {calculating ? (
-          <CalculatingPlan />
-        ) : step === 1 ? (
-          <Step1Finances value={finances} onChange={setFinances} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
-        ) : step === 2 ? (
-          <Step2Home value={home} onChange={setHome} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
-        ) : step === 3 ? (
-          <Step3Profile value={profile} onChange={setProfile} />
-        ) : step === 4 ? (
-          <Step4Plan finances={finances} home={home} profile={profile} planName={planName} onPlanNameChange={(name) => void updatePlanName(name)} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
-        ) : (
-          <ComingSoon step={step} />
-        )}
+        {calculating && <CalculatingPlan />}
+        <div key={step} className={navDirection === "next" ? "animate-step-slide" : "animate-step-slide [animation-direction:reverse]"}>
+          {step === 1 ? (
+            <Step1Finances value={finances} onChange={setFinances} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
+          ) : step === 2 ? (
+            <Step2Home value={home} onChange={setHome} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
+          ) : step === 3 ? (
+            <Step3Profile value={profile} onChange={setProfile} />
+          ) : step === 4 ? (
+            <Step4Plan finances={finances} home={home} profile={profile} planName={planName} onPlanNameChange={(name) => void updatePlanName(name)} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
+          ) : (
+            <ComingSoon step={step} />
+          )}
+        </div>
 
-        {!calculating && <div className="mt-10 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {!calculating && <div className="sticky bottom-0 -mx-4 mt-10 flex flex-col-reverse gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:items-center sm:justify-between sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
           <Button
             variant="ghost"
             asChild={step === 1}
@@ -272,7 +289,10 @@ function PlanWizardPage() {
               disabled={!canGoNext}
               className={step === 3 ? "h-12 px-8 text-base font-semibold" : undefined}
               onClick={() =>
-                step === 3 ? calculatePlan() : goToStep(step + 1)
+                () => {
+                  if (!validateStep()) return;
+                  step === 3 ? calculatePlan() : goToStep(step + 1);
+                }
               }
             >
               {step === 1
@@ -295,14 +315,27 @@ function PlanWizardPage() {
 }
 
 function CalculatingPlan() {
+  const messages = [
+    "Analysing your income and expenses...",
+    "Calculating your monthly cash flow...",
+    "Running affordability checks...",
+    "Generating your personalised plan...",
+    "Almost ready...",
+  ];
+  const [index, setIndex] = React.useState(0);
+  React.useEffect(() => {
+    const timer = window.setInterval(() => setIndex((current) => (current + 1) % messages.length), 1500);
+    return () => window.clearInterval(timer);
+  }, [messages.length]);
   return (
-    <div className="flex min-h-[420px] flex-col items-center justify-center rounded-2xl border border-border bg-card p-8 text-center shadow-soft">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      <h1 className="mt-5 text-xl font-extrabold text-foreground sm:text-2xl">
-        Building your personalised affordability plan...
-      </h1>
-      <div className="mt-6 w-full max-w-sm">
-        <Progress value={72} />
+    <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur">
+      <div className="h-1 w-full overflow-hidden bg-primary/15"><div className="h-full w-2/3 animate-pulse bg-primary" /></div>
+      <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+        <div className="animate-logo-pulse text-3xl font-extrabold text-primary">HomeAfford</div>
+        <Loader2 className="mt-8 h-8 w-8 animate-spin text-primary" />
+        <h1 className="mt-5 text-xl font-extrabold text-foreground sm:text-2xl">Building your personalised affordability plan...</h1>
+        <p className="mt-3 text-sm text-muted-foreground">{messages[index]}</p>
+        <div className="mt-6 w-full max-w-sm"><Progress value={72} /></div>
       </div>
     </div>
   );

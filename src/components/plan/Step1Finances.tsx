@@ -151,7 +151,7 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
     } catch (error) {
       setMessage({
         type: "error",
-        text: error instanceof Error ? error.message : "We couldn't read this file automatically. Please fill in the details below manually.",
+        text: "AI analysis is temporarily unavailable. Please fill in the details manually below.",
       });
     } finally {
       setAnalysing(false);
@@ -229,8 +229,9 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
         )}
         <Button className="mt-5 w-full sm:w-auto" onClick={handleAnalyze} disabled={files.length === 0 || analysing}>
           {analysing ? <Loader2 className="h-4 w-4 animate-spin" /> : "✨"}
-          Analyse with AI
+          {analysing ? "AI is reading your statement..." : "Analyse with AI"}
         </Button>
+        {analysing && <div className="mt-4 h-2 overflow-hidden rounded-full bg-primary/15"><div className="h-full w-2/3 animate-pulse rounded-full bg-primary" /></div>}
       </section>
 
       <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">

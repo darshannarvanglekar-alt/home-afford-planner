@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { UpgradeModal } from "@/components/plan/UpgradeModal";
+import { LoadingLogo } from "@/components/LoadingLogo";
 import { useAuth } from "@/lib/auth";
 import { FREE_PLAN_LIMITS, LAUNCH_MODE, hasProAccess } from "@/lib/subscription";
 import { formatINR } from "@/lib/plan-schema";
@@ -76,6 +77,9 @@ function DashboardPage() {
   const [deleteTarget, setDeleteTarget] = React.useState<PlanRow | null>(null);
   const [renamingPlanId, setRenamingPlanId] = React.useState<string | null>(null);
   const [renameValue, setRenameValue] = React.useState("");
+  const [loadError, setLoadError] = React.useState(false);
+  const [slowLoad, setSlowLoad] = React.useState(false);
+  const [reloadKey, setReloadKey] = React.useState(0);
 
   // Protect route
   React.useEffect(() => {
@@ -84,10 +88,19 @@ function DashboardPage() {
     }
   }, [session, authLoading, navigate]);
 
+  React.useEffect(() => {
+    if (plans !== null) return;
+    const timer = window.setTimeout(() => setSlowLoad(true), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [plans]);
+
   // Load profile + plans
   React.useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    setLoadError(false);
+    setSlowLoad(false);
+    setPlans(null);
 
     (async () => {
       const [{ data: prof }, { data: planData, error: planErr }] = await Promise.all([
@@ -105,7 +118,8 @@ function DashboardPage() {
       if (cancelled) return;
       setProfile(prof ?? null);
       if (planErr) {
-        toast.error("Couldn't load your plans.");
+        toast.error("Something went wrong. Please check your connection and try again.");
+        setLoadError(true);
         setPlans([]);
       } else {
         setPlans(planData ?? []);
@@ -115,7 +129,7 @@ function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, reloadKey]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -139,7 +153,8 @@ function DashboardPage() {
     setPlans((current) => current?.map((p) => (p.id === planId ? { ...p, name: nextName } : p)) ?? current);
     setRenamingPlanId(null);
     const { error } = await supabase.from("plans").update({ name: nextName }).eq("id", planId);
-    if (error) toast.error("Couldn't rename plan.");
+    if (error) toast.error("Something went wrong. Please check your connection and try again.");
+    else toast.success("✅ Plan renamed");
   };
 
   const deletePlan = async () => {
@@ -148,15 +163,12 @@ function DashboardPage() {
     setDeleteTarget(null);
     setPlans((current) => current?.filter((p) => p.id !== targetId) ?? current);
     const { error } = await supabase.from("plans").delete().eq("id", targetId);
-    if (error) toast.error("Couldn't delete plan.");
+    if (error) toast.error("Something went wrong. Please check your connection and try again.");
+    else toast.success("Plan deleted");
   };
 
   if (authLoading || !session) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-sm text-muted-foreground">Loading…</div>
-      </div>
-    );
+    return <LoadingLogo />;
   }
 
   const firstName =
@@ -275,18 +287,24 @@ function DashboardPage() {
           <div className="mt-4">
             {plans === null ? (
               <div className="space-y-3">
-                <Skeleton className="h-20 w-full rounded-xl" />
-                <Skeleton className="h-20 w-full rounded-xl" />
+                {Array.from({ length: 3 }).map((_, index) => <PlanCardSkeleton key={index} />)}
+                {slowLoad && <p className="text-center text-sm text-muted-foreground">Having trouble loading? Try refreshing.</p>}
+              </div>
+            ) : loadError ? (
+              <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-soft">
+                <p className="text-sm font-medium text-foreground">Something went wrong. Please check your connection and try again.</p>
+                <Button className="mt-4" onClick={() => setReloadKey((key) => key + 1)}>Retry</Button>
               </div>
             ) : plans.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                  <FileText className="h-6 w-6" />
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-soft text-primary">
+                  <FileText className="h-7 w-7" />
                 </div>
-                <p className="mt-4 text-sm font-medium text-foreground">No plans yet.</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Start your first plan above.
+                <p className="mt-4 text-xl font-extrabold text-foreground">No plans yet</p>
+                <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+                  Your home affordability plans will appear here. Start your first plan to see how your dream home fits your finances.
                 </p>
+                <Button className="mt-6 w-full sm:w-auto" size="lg" onClick={handleStartPlan}>Start Your First Plan</Button>
               </div>
             ) : (
               <ul className="grid gap-3">
@@ -368,6 +386,25 @@ function DashboardPage() {
         onOpenChange={setUpgradeOpen}
         message="You've used your 1 free plan. Upgrade to Pro for unlimited plans."
       />
+    </div>
+  );
+}
+
+function PlanCardSkeleton() {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 space-y-3">
+          <Skeleton className="h-6 w-52 rounded-md" />
+          <div className="flex gap-2">
+            <Skeleton className="h-6 w-28 rounded-full" />
+            <Skeleton className="h-6 w-24 rounded-full" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-4 w-32 rounded-md" />
+        </div>
+        <Skeleton className="h-11 w-24 rounded-md" />
+      </div>
     </div>
   );
 }

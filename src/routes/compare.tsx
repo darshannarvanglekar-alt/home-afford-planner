@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingLogo } from "@/components/LoadingLogo";
 import { useAuth } from "@/lib/auth";
 import { parsePlanData, propertyTypeLabel, suggestPlanName } from "@/lib/plan-display";
 import { cn } from "@/lib/utils";
@@ -104,7 +106,7 @@ function ComparePage() {
 
       if (cancelled) return;
       if (error) {
-        toast.error("Couldn't load saved plans.");
+        toast.error("Something went wrong. Please check your connection and try again.");
         setPlans([]);
         return;
       }
@@ -170,6 +172,7 @@ function ComparePage() {
       A: buildMetrics("Property A", sideA, sharedFinances, sharedProfile),
       B: buildMetrics("Property B", sideB, sharedFinances, sharedProfile),
     };
+    await new Promise((resolve) => window.setTimeout(resolve, 550));
     setResults(nextResults);
     setComparing(false);
     await generateSummary(nextResults);
@@ -192,7 +195,7 @@ function ComparePage() {
       if (!response.ok || !payload.summary) throw new Error(payload.error ?? "We couldn't generate the AI summary right now.");
       setSummary(payload.summary);
     } catch (error) {
-      setSummary(error instanceof Error ? error.message : "We couldn't generate the AI summary right now.");
+      setSummary("AI analysis is temporarily unavailable. Please fill in the details manually below.");
     } finally {
       setSummaryLoading(false);
     }
@@ -212,16 +215,12 @@ function ComparePage() {
       data: { finances: sharedFinances, home: selected.home, profile: sharedProfile },
     });
     setSavingSide(null);
-    if (error) toast.error("Couldn't save this property as a plan.");
-    else toast.success(`${name} saved as a plan.`);
+    if (error) toast.error("Something went wrong. Please check your connection and try again.");
+    else toast.success("✅ Plan saved successfully");
   };
 
   if (authLoading || !session || plans === null) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingLogo />;
   }
 
   return (
@@ -248,8 +247,8 @@ function ComparePage() {
           <Card className="mt-8">
             <CardContent className="p-6 text-center sm:p-10">
               <BarChart3 className="mx-auto h-10 w-10 text-primary" />
-              <h2 className="mt-4 text-xl font-extrabold text-foreground">Please complete at least one plan first so we can use your financial profile for comparison.</h2>
-              <Button className="mt-6 w-full sm:max-w-sm" size="lg" onClick={() => navigate({ to: "/plan/new", search: { step: 1, planId: undefined } })}>Compare Now</Button>
+              <h2 className="mt-4 text-xl font-extrabold text-foreground">Complete at least one plan first to use property comparison.</h2>
+              <Button className="mt-6 w-full sm:max-w-sm" size="lg" onClick={() => navigate({ to: "/plan/new", search: { step: 1, planId: undefined } })}>Start a Plan</Button>
             </CardContent>
           </Card>
         ) : (
@@ -264,6 +263,7 @@ function ComparePage() {
               Compare Now
             </Button>
 
+            {comparing && <ComparisonSkeleton />}
             {results && <ComparisonResults results={results} summary={summary} summaryLoading={summaryLoading} onSave={saveAsPlan} savingSide={savingSide} onReset={() => { setResults(null); setSummary(""); }} />}
           </>
         )}
@@ -398,7 +398,18 @@ function Field({ label, className, children }: { label: string; className?: stri
 }
 
 function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return <Field label={label}><Input type="number" min="0" value={Number.isFinite(value) ? value : 0} onChange={(event) => onChange(Number(event.target.value) || 0)} /></Field>;
+  return <Field label={label}><Input type="number" inputMode="decimal" min="0" value={Number.isFinite(value) ? value : 0} onChange={(event) => onChange(Number(event.target.value) || 0)} /></Field>;
+}
+
+function ComparisonSkeleton() {
+  return (
+    <section className="mt-8 rounded-2xl border border-border bg-card p-5 shadow-soft">
+      <p className="mb-4 text-sm font-medium text-muted-foreground">Comparing both properties...</p>
+      <div className="space-y-3">
+        {Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-10 w-full rounded-lg" />)}
+      </div>
+    </section>
+  );
 }
 
 function sideFromPlan(plan: PlanRow): CompareSide {

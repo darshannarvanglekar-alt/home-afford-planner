@@ -176,7 +176,7 @@ export function Step2Home({ value, onChange, canUseProFeatures = true, onUpgrade
     } catch (error) {
       setExtractMessage({
         type: "error",
-        text: error instanceof Error ? error.message : "The image quality is too low to read. Please try a clearer photo or upload the PDF directly.",
+        text: "AI analysis is temporarily unavailable. Please fill in the details manually below.",
       });
     } finally {
       setExtracting(false);
@@ -452,8 +452,9 @@ export function Step2Home({ value, onChange, canUseProFeatures = true, onUpgrade
               onClick={extractPaymentPlan}
             >
               {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : "✨"}
-              Extract Payment Plan
+              {extracting ? "Extracting payment stages..." : "Extract Payment Plan"}
             </Button>
+            {extracting && <div className="mt-4 h-2 overflow-hidden rounded-full bg-primary/15"><div className="h-full w-2/3 animate-pulse rounded-full bg-primary" /></div>}
           </div>
 
           <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
@@ -467,7 +468,7 @@ export function Step2Home({ value, onChange, canUseProFeatures = true, onUpgrade
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    <th className="py-2 pr-3">Stage Name</th>
+                    <th className="sticky left-0 z-10 bg-background py-2 pr-3">Stage Name</th>
                     <th className="py-2 px-3">Month</th>
                     <th className="py-2 px-3">Bank Pays</th>
                     <th className="py-2 px-3">You Pay</th>
@@ -486,7 +487,7 @@ export function Step2Home({ value, onChange, canUseProFeatures = true, onUpgrade
                           aiStageIds.has(s.id) && "border-l-4 border-l-primary bg-primary/5",
                         )}
                       >
-                        <td className="py-2 pr-3">
+                        <td className="sticky left-0 z-10 bg-card py-2 pr-3">
                           {aiStageIds.has(s.id) && <Badge variant="secondary" className="mb-1">AI</Badge>}
                           <Input
                             value={s.name}
