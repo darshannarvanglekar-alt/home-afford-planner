@@ -1,7 +1,10 @@
 import * as React from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import type { SubscriptionProfile } from "@/lib/subscription";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface AuthContextValue {
   session: Session | null;
@@ -18,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = React.useState<Session | null>(null);
   const [subscription, setSubscription] = React.useState<SubscriptionProfile | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [sessionExpired, setSessionExpired] = React.useState(false);
 
   const refreshSubscription = React.useCallback(async () => {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -49,7 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     // Set up listener FIRST
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === "SIGNED_OUT" && session) setSessionExpired(true);
       setSession(newSession);
       setLoading(false);
       window.setTimeout(() => void refreshSubscription(), 0);
@@ -80,7 +85,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [session, subscription, loading, refreshSubscription],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <Dialog open={sessionExpired} onOpenChange={setSessionExpired}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Your session has expired.</DialogTitle>
+            <DialogDescription>Please sign in again. Any draft data already entered will remain in this browser until you return.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button asChild onClick={() => setSessionExpired(false)}>
+              <Link to="/auth">Sign In</Link>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
