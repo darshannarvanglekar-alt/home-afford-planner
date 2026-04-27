@@ -74,7 +74,7 @@ function LandingPage() {
 
       <main>
         {/* Hero */}
-        <section className="relative overflow-hidden">
+        <section className="relative overflow-hidden hero-gradient-animated">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_60%_at_50%_0%,oklch(0.96_0.025_277)_0%,transparent_70%)]"
@@ -106,6 +106,7 @@ function LandingPage() {
             <p className="mt-5 text-xs text-muted-foreground sm:text-sm">
               🔒 Bank statements deleted after processing. Your data stays private.
             </p>
+            <p className="mt-3 text-sm font-semibold text-primary">Trusted by 100+ families</p>
           </div>
         </section>
 
