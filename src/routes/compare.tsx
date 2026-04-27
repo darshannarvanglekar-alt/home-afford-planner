@@ -247,8 +247,8 @@ function ComparePage() {
           <Card className="mt-8">
             <CardContent className="p-6 text-center sm:p-10">
               <BarChart3 className="mx-auto h-10 w-10 text-primary" />
-              <h2 className="mt-4 text-xl font-extrabold text-foreground">Please complete at least one plan first so we can use your financial profile for comparison.</h2>
-              <Button className="mt-6 w-full sm:max-w-sm" size="lg" onClick={() => navigate({ to: "/plan/new", search: { step: 1, planId: undefined } })}>Compare Now</Button>
+              <h2 className="mt-4 text-xl font-extrabold text-foreground">Complete at least one plan first to use property comparison.</h2>
+              <Button className="mt-6 w-full sm:max-w-sm" size="lg" onClick={() => navigate({ to: "/plan/new", search: { step: 1, planId: undefined } })}>Start a Plan</Button>
             </CardContent>
           </Card>
         ) : (
@@ -263,6 +263,7 @@ function ComparePage() {
               Compare Now
             </Button>
 
+            {comparing && <ComparisonSkeleton />}
             {results && <ComparisonResults results={results} summary={summary} summaryLoading={summaryLoading} onSave={saveAsPlan} savingSide={savingSide} onReset={() => { setResults(null); setSummary(""); }} />}
           </>
         )}
@@ -397,7 +398,18 @@ function Field({ label, className, children }: { label: string; className?: stri
 }
 
 function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return <Field label={label}><Input type="number" min="0" value={Number.isFinite(value) ? value : 0} onChange={(event) => onChange(Number(event.target.value) || 0)} /></Field>;
+  return <Field label={label}><Input type="number" inputMode="decimal" min="0" value={Number.isFinite(value) ? value : 0} onChange={(event) => onChange(Number(event.target.value) || 0)} /></Field>;
+}
+
+function ComparisonSkeleton() {
+  return (
+    <section className="mt-8 rounded-2xl border border-border bg-card p-5 shadow-soft">
+      <p className="mb-4 text-sm font-medium text-muted-foreground">Comparing both properties...</p>
+      <div className="space-y-3">
+        {Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-10 w-full rounded-lg" />)}
+      </div>
+    </section>
+  );
 }
 
 function sideFromPlan(plan: PlanRow): CompareSide {
