@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [subscription, setSubscription] = React.useState<SubscriptionProfile | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [sessionExpired, setSessionExpired] = React.useState(false);
+  const hadSessionRef = React.useRef(false);
 
   const refreshSubscription = React.useCallback(async () => {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -54,8 +55,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     // Set up listener FIRST
     const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
-      if (event === "SIGNED_OUT" && session) setSessionExpired(true);
+      if (event === "SIGNED_OUT" && hadSessionRef.current) setSessionExpired(true);
       setSession(newSession);
+      hadSessionRef.current = !!newSession;
       setLoading(false);
       window.setTimeout(() => void refreshSubscription(), 0);
     });
@@ -63,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // THEN check existing session
     supabase.auth.getSession().then(({ data: { session: existing } }) => {
       setSession(existing);
+      hadSessionRef.current = !!existing;
       setLoading(false);
       void refreshSubscription();
     });
