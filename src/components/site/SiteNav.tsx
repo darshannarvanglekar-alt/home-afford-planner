@@ -1,14 +1,23 @@
 import * as React from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 export function SiteNav() {
   const [open, setOpen] = React.useState(false);
+  const navigate = useNavigate();
+  const { session, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    setOpen(false);
+    navigate({ to: "/" });
+  };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 shadow-soft backdrop-blur supports-[backdrop-filter]:bg-background/70">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link
           to="/"
@@ -19,15 +28,19 @@ export function SiteNav() {
         </Link>
 
         <nav className="hidden items-center gap-3 md:flex">
-          <Button asChild variant="ghost">
-            <Link to="/pricing">Pricing</Link>
-          </Button>
+          {session && <Button asChild variant="ghost"><Link to="/dashboard">Dashboard</Link></Button>}
+          {session && <Button asChild variant="ghost"><Link to="/compare" search={{ planA: undefined }}>Compare</Link></Button>}
+          <Button asChild variant="ghost"><Link to="/pricing">Pricing</Link></Button>
+          {session && <Button asChild variant="ghost"><Link to="/settings">Settings</Link></Button>}
+          {session ? <Button variant="outline" onClick={handleSignOut}>Sign Out</Button> : (
+          <>
           <Button asChild variant="outline">
             <Link to="/auth">Sign In</Link>
           </Button>
           <Button asChild>
             <Link to="/auth">Start Free</Link>
           </Button>
+          </>)}
         </nav>
 
         <button
@@ -48,15 +61,18 @@ export function SiteNav() {
         )}
       >
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-3 sm:px-6">
-          <Button asChild variant="ghost" className="w-full" onClick={() => setOpen(false)}>
-            <Link to="/pricing">Pricing</Link>
-          </Button>
+          {session && <Button asChild variant="ghost" className="w-full" onClick={() => setOpen(false)}><Link to="/dashboard">Dashboard</Link></Button>}
+          {session && <Button asChild variant="ghost" className="w-full" onClick={() => setOpen(false)}><Link to="/compare" search={{ planA: undefined }}>Compare</Link></Button>}
+          <Button asChild variant="ghost" className="w-full" onClick={() => setOpen(false)}><Link to="/pricing">Pricing</Link></Button>
+          {session && <Button asChild variant="ghost" className="w-full" onClick={() => setOpen(false)}><Link to="/settings">Settings</Link></Button>}
+          {session ? <Button variant="outline" className="w-full" onClick={handleSignOut}>Sign Out</Button> : <>
           <Button asChild variant="outline" className="w-full" onClick={() => setOpen(false)}>
             <Link to="/auth">Sign In</Link>
           </Button>
           <Button asChild className="w-full" onClick={() => setOpen(false)}>
             <Link to="/auth">Start Free</Link>
           </Button>
+          </>}
         </div>
       </div>
     </header>
