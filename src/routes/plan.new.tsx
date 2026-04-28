@@ -304,7 +304,6 @@ function PlanWizardPage() {
               {validationError ? <p className="text-sm font-medium text-destructive">{validationError}</p> : null}
               <Button
                 size="lg"
-                disabled={!canGoNext}
                 className={step === 3 ? "h-12 px-8 text-base font-semibold" : undefined}
                 onClick={() => {
                   if (!validateStep()) return;
