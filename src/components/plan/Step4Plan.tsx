@@ -320,9 +320,7 @@ function SmartSuggestionsPanel({ finances, home, profile, canUseProFeatures = tr
         )}
       </div>
 
-      <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
-        These suggestions are for planning purposes only and do not constitute financial or investment advice. Please consult a qualified financial advisor before making decisions.
-      </p>
+        <p className="mt-5 text-xs leading-relaxed text-muted-foreground">{DISCLAIMER}</p>
     </section>
   );
 }
