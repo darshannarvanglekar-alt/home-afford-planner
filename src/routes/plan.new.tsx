@@ -300,24 +300,25 @@ function PlanWizardPage() {
           </Button>
 
           {step < 4 ? (
-            <Button
-              size="lg"
-              disabled={!canGoNext}
-              className={step === 3 ? "h-12 px-8 text-base font-semibold" : undefined}
-              onClick={() =>
-                () => {
+            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+              {validationError ? <p className="text-sm font-medium text-destructive">{validationError}</p> : null}
+              <Button
+                size="lg"
+                disabled={!canGoNext}
+                className={step === 3 ? "h-12 px-8 text-base font-semibold" : undefined}
+                onClick={() => {
                   if (!validateStep()) return;
                   step === 3 ? calculatePlan() : goToStep(step + 1);
-                }
-              }
-            >
-              {step === 1
-                ? "Next: Your Home"
-                : step === 2
-                  ? "Next: Your Profile"
-                  : "Calculate My Plan"}
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+                }}
+              >
+                {step === 1
+                  ? "Next: Your Home"
+                  : step === 2
+                    ? "Next: Your Profile"
+                    : "Calculate My Plan"}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
           ) : (
             <Button size="lg" onClick={() => goToStep(1)}>
               Edit Plan
