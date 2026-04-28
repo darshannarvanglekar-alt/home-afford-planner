@@ -190,13 +190,6 @@ function PlanWizardPage() {
     return <LoadingLogo />;
   }
 
-  const canGoNext =
-    step === 1
-      ? finances.income.primarySalary > 0
-      : step === 2
-        ? home.propertyCost > 0
-        : true;
-
   const goToStep = (nextStep: number) => {
     setValidationError("");
     setNavDirection(nextStep > step ? "next" : "back");
