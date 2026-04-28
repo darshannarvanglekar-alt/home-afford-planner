@@ -80,28 +80,11 @@ export const Route = createFileRoute("/api/generate-plan-suggestions")({
           const parsed = requestSchema.safeParse(await request.json());
           if (!parsed.success) return jsonError("We couldn't prepare your AI suggestions.", 400);
 
-          const apiKey = process.env.OPENAI_API_KEY;
+          const apiKey = process.env.LOVABLE_API_KEY ?? process.env.OPENAI_API_KEY;
           if (!apiKey) return jsonError("AI suggestions are not configured yet.", 500);
 
-          const response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "gpt-4o-mini",
-              temperature: 0.7,
-              messages: [
-                { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: buildUserPrompt(parsed.data.profile) },
-              ],
-            }),
-          });
-
-          if (!response.ok) {
-            return jsonError("AI suggestions are busy right now. Please try regenerating.", response.status);
-          }
+          const response = await callAiWithRetry(apiKey, parsed.data.profile);
+          if (!response.ok) return jsonError("AI suggestions are busy right now. Please try regenerating.", response.status);
 
           const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
           const suggestions = parseSuggestions(payload.choices?.[0]?.message?.content ?? "");
@@ -147,6 +130,44 @@ function buildUserPrompt(profile: z.infer<typeof profileSchema>) {
 - Elderly parents: ${profile.elderlyParents ? "yes" : "no"}
 - Property type: ${profile.propertyType}
 - Discretionary spend: ₹${Math.round(profile.discretionary)}`;
+}
+
+async function callAiWithRetry(apiKey: string, profile: z.infer<typeof profileSchema>) {
+  const body = JSON.stringify({
+    model: process.env.LOVABLE_API_KEY ? "google/gemini-3-flash-preview" : "gpt-4o-mini",
+    temperature: 0.7,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: buildUserPrompt(profile) },
+    ],
+  });
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const response = await fetch(process.env.LOVABLE_API_KEY ? "https://ai.gateway.lovable.dev/v1/chat/completions" : "https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body,
+      });
+
+      if (response.ok || attempt === 2) {
+        if (!response.ok) console.error("AI suggestions API failed", { status: response.status, body: await response.clone().text().catch(() => "Unable to read error body") });
+        return response;
+      }
+
+      console.error("AI suggestions API attempt failed; retrying", { status: response.status, body: await response.clone().text().catch(() => "Unable to read error body") });
+    } catch (error) {
+      console.error("AI suggestions API request error", { attempt, error });
+      if (attempt === 2) throw error;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+
+  throw new Error("We couldn't generate suggestions right now.");
 }
 
 function parseSuggestions(content: string) {
