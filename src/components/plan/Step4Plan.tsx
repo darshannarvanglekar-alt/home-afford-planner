@@ -1,9 +1,12 @@
 import * as React from "react";
-import { AlertCircle, ChevronDown, GitCompareArrows, Loader2, Pencil, RefreshCw, ShieldCheck, TriangleAlert } from "lucide-react";
+import { AlertCircle, Banknote, ChevronDown, Coins, GitCompareArrows, Landmark, Layers3, Loader2, Pencil, RefreshCw, Shield, ShieldCheck, TrendingUp, TriangleAlert, WalletCards } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { proBadgeText } from "@/lib/subscription";
@@ -33,6 +36,7 @@ export function Step4Plan({ finances, home, profile, planName = "", onPlanNameCh
   const [open, setOpen] = React.useState(true);
   const [editingName, setEditingName] = React.useState(false);
   const [draftName, setDraftName] = React.useState(planName);
+  const [safetyAllocation, setSafetyAllocation] = React.useState(0);
   const plan = React.useMemo(() => calculateAffordabilityPlan(finances, home, profile), [finances, home, profile]);
   const verdictTone = {
     safe: {
@@ -128,6 +132,12 @@ export function Step4Plan({ finances, home, profile, planName = "", onPlanNameCh
         <MetricCard label="Emergency Fund Needed" value={formatINR(plan.emergencyFundNeeded)} />
       </section>
 
+      {safetyAllocation > 0 && (
+        <div className="rounded-2xl border border-success/20 bg-success-soft/55 p-4 text-sm font-semibold text-success-soft-foreground shadow-soft">
+          Safety buffer allocation: {formatINR(safetyAllocation)}/month
+        </div>
+      )}
+
       <Button type="button" variant="outline" className="w-full" asChild>
         <Link to="/compare" search={{ planA: undefined }}>
           <GitCompareArrows className="h-4 w-4" />
@@ -136,6 +146,8 @@ export function Step4Plan({ finances, home, profile, planName = "", onPlanNameCh
       </Button>
 
       <SmartSuggestionsPanel finances={finances} home={home} profile={profile} canUseProFeatures={canUseProFeatures} onUpgradeRequired={onUpgradeRequired} />
+
+      <CorpusBuilder finances={finances} home={home} planSurplus={plan.surplusAfterEmi} onSafetyAllocation={setSafetyAllocation} />
 
       <section className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
         <Button
@@ -164,6 +176,10 @@ export function Step4Plan({ finances, home, profile, planName = "", onPlanNameCh
           </div>
         )}
       </section>
+
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        HomeAfford is a scenario planning tool. All projections are illustrative and not financial, investment, or loan advice.
+      </p>
     </div>
   );
 }
