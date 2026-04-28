@@ -327,6 +327,103 @@ function SmartSuggestionsPanel({ finances, home, profile, canUseProFeatures = tr
   );
 }
 
+type CorpusRoute = "monthlyInvestment" | "fixedSaving" | "lumpSum" | "pooledSaving" | "gold" | "blended";
+type RouteA = "monthlyInvestment" | "lumpSum";
+type RouteB = "fixedSaving" | "pooledSaving";
+
+const DISCLAIMER = "HomeAfford is a scenario planning tool. All projections are illustrative and not financial, investment, or loan advice.";
+
+const routeCards: Array<{ id: CorpusRoute; title: string; description: string; icon: React.ElementType }> = [
+  { id: "monthlyInvestment", title: "Monthly Investment", description: "You invest a fixed amount every month. Returns vary based on market conditions.", icon: TrendingUp },
+  { id: "fixedSaving", title: "Monthly Fixed Return Saving", description: "You save a fixed amount every month at a fixed return rate. Like a recurring deposit.", icon: Landmark },
+  { id: "lumpSum", title: "Lump Sum Investment", description: "You invest a larger amount once and let it grow over time.", icon: Banknote },
+  { id: "pooledSaving", title: "Chit-Style Pooled Saving", description: "You contribute monthly to a group pool and receive a lump sum at a chosen point in the cycle.", icon: WalletCards },
+  { id: "gold", title: "Gold Accumulation", description: "You buy gold periodically. Returns are variable and linked to gold price movements.", icon: Coins },
+  { id: "blended", title: "Blended Approach", description: "You split your monthly surplus across two routes for a balance of growth and safety.", icon: Layers3 },
+];
+
+function CorpusBuilder({ finances, home, planSurplus, onSafetyAllocation }: { finances: Finances; home: Home; planSurplus: number; onSafetyAllocation: (amount: number) => void }) {
+  const targetDefault = Math.max(100000, home.downPayment + home.registrationStampDuty + home.interiorBudget);
+  const [route, setRoute] = React.useState<CorpusRoute>("monthlyInvestment");
+  const [monthly, setMonthly] = React.useState(Math.max(0, Math.round(Math.min(planSurplus, 25000))));
+  const [lumpSum, setLumpSum] = React.useState(Math.max(0, home.downPayment || 100000));
+  const [timeline, setTimeline] = React.useState(60);
+  const [target, setTarget] = React.useState(targetDefault);
+  const [rate, setRate] = React.useState(10);
+  const [fixedRate, setFixedRate] = React.useState(7);
+  const [chitRate, setChitRate] = React.useState(9);
+  const [chitReceiveMonth, setChitReceiveMonth] = React.useState(12);
+  const [stepUp, setStepUp] = React.useState(false);
+  const [stepPct, setStepPct] = React.useState(10);
+  const [routeA, setRouteA] = React.useState<RouteA>("monthlyInvestment");
+  const [routeB, setRouteB] = React.useState<RouteB>("fixedSaving");
+  const [amountA, setAmountA] = React.useState(Math.max(0, Math.round(Math.min(planSurplus / 2, 15000))));
+  const [amountB, setAmountB] = React.useState(Math.max(0, Math.round(Math.min(planSurplus / 2, 10000))));
+  const [routeBRate, setRouteBRate] = React.useState(7);
+
+  const result = React.useMemo(() => buildCorpusProjection({ route, monthly, lumpSum, timeline, rate, fixedRate, chitRate, chitReceiveMonth, stepUp, stepPct, routeA, routeB, amountA, amountB, routeBRate }), [amountA, amountB, chitRate, chitReceiveMonth, fixedRate, lumpSum, monthly, rate, route, routeA, routeB, routeBRate, stepPct, stepUp, timeline]);
+  const diff = result.final - target;
+  const marketRates = route === "gold" ? [6, 8, 10] : [8, 10, 12];
+  const monthlyTotal = route === "blended" && routeA === "monthlyInvestment" ? amountA + amountB : route === "blended" ? amountB : monthly;
+
+  return (
+    <>
+      <section className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
+        <div>
+          <h2 className="text-xl font-extrabold text-foreground sm:text-2xl">Corpus Builder</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Illustrative scenarios based on your entered amounts and assumed rates.</p>
+        </div>
+
+        <div className="mt-5">
+          <h3 className="text-base font-extrabold text-foreground">How do you want to build your corpus?</h3>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {routeCards.map((card) => {
+              const Icon = card.icon;
+              const selected = route === card.id;
+              return (
+                <button key={card.id} type="button" className={cn("rounded-2xl border bg-background p-4 text-left transition-all", selected ? "border-primary ring-2 ring-primary/15" : "border-border hover:border-primary/50")} onClick={() => setRoute(card.id)}>
+                  <Icon className="h-5 w-5 text-primary" />
+                  <p className="mt-3 font-extrabold text-foreground">{card.title}</p>
+                  <p className="mt-1 text-sm leading-5 text-muted-foreground">{card.description}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-5 rounded-2xl border border-border bg-muted/25 p-4">
+          <RouteInputs route={route} monthly={monthly} setMonthly={setMonthly} lumpSum={lumpSum} setLumpSum={setLumpSum} timeline={timeline} setTimeline={setTimeline} rate={rate} setRate={setRate} fixedRate={fixedRate} setFixedRate={setFixedRate} chitRate={chitRate} setChitRate={setChitRate} chitReceiveMonth={chitReceiveMonth} setChitReceiveMonth={setChitReceiveMonth} stepUp={stepUp} setStepUp={setStepUp} stepPct={stepPct} setStepPct={setStepPct} routeA={routeA} setRouteA={setRouteA} routeB={routeB} setRouteB={setRouteB} amountA={amountA} setAmountA={setAmountA} amountB={amountB} setAmountB={setAmountB} routeBRate={routeBRate} setRouteBRate={setRouteBRate} planSurplus={planSurplus} marketRates={marketRates} />
+          <CurrencyField label="Target corpus" value={target} onChange={setTarget} />
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <MetricCard label="Projected Corpus" value={formatINR(result.final)} valueClassName="text-primary" />
+          <MetricCard label="Target Corpus" value={formatINR(target)} />
+          <MetricCard label={diff >= 0 ? "Surplus" : "Shortfall"} value={formatINR(Math.abs(diff))} valueClassName={diff >= 0 ? "text-success" : "text-destructive"} />
+        </div>
+
+        <div className="mt-5 h-64 rounded-2xl border border-border bg-background p-3">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={result.points} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />
+              <XAxis dataKey="month" tickFormatter={(value) => `${value}m`} tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }} />
+              <YAxis tickFormatter={(value) => compactINR(Number(value))} width={48} tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }} />
+              <Tooltip formatter={(value) => formatINR(Number(value))} labelFormatter={(label) => `Month ${label}`} contentStyle={{ background: "var(--color-card)", borderColor: "var(--color-border)", borderRadius: "12px" }} />
+              <Line type="monotone" dataKey="flat" name="Fixed monthly amount" stroke="var(--color-chart-1)" strokeWidth={3} dot={false} />
+              {result.hasStep && <Line type="monotone" dataKey="step" name="With annual increase" stroke="var(--color-chart-3)" strokeWidth={3} dot={false} />}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        {result.hasStep && <p className="mt-3 text-sm font-medium text-success">With a {stepPct}% annual increase, you reach your target {monthsEarlier(result.points, target)} months earlier.</p>}
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">This projection is an illustrative scenario based on the return rate and contribution you entered.</p>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{DISCLAIMER}</p>
+      </section>
+
+      <SafetyBufferPlanner finances={finances} defaultMonthly={Math.max(0, Math.round(monthlyTotal * 0.25))} onInclude={onSafetyAllocation} />
+    </>
+  );
+}
+
 function layerTooltip(index: number) {
   return [
     "Checks if your income covers all essential expenses",
