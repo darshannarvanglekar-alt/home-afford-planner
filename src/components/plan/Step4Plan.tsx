@@ -83,7 +83,21 @@ export function Step4Plan({
   const [open, setOpen] = React.useState(true);
   const [editingName, setEditingName] = React.useState(false);
   const [draftName, setDraftName] = React.useState(planName);
-  const [safetyAllocation, setSafetyAllocation] = React.useState(0);
+  const safetyKey = `homeafford.safetyAllocation.${planName || "default"}`;
+  const [safetyAllocation, setSafetyAllocation] = React.useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    const raw = window.localStorage.getItem(safetyKey);
+    const n = raw ? Number(raw) : 0;
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  });
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (safetyAllocation > 0) {
+      window.localStorage.setItem(safetyKey, String(safetyAllocation));
+    } else {
+      window.localStorage.removeItem(safetyKey);
+    }
+  }, [safetyAllocation, safetyKey]);
   const plan = React.useMemo(
     () => calculateAffordabilityPlan(finances, home, profile),
     [finances, home, profile],
