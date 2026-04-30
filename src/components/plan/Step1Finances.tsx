@@ -12,7 +12,8 @@ import {
   formatINR,
   surplus,
   totalIncome,
-  totalOutflow,
+  totalCommitments,
+  totalExpenses,
 } from "@/lib/plan-schema";
 
 interface ExtractedStatementValues {
@@ -42,12 +43,12 @@ const EXPENSE_CARDS: Array<{
   label: string;
   helper: string;
 }> = [
-  { key: "housing", emoji: "🏠", label: "Housing & Utilities", helper: "rent, electricity, water, maintenance" },
-  { key: "family", emoji: "👨‍👩‍👧", label: "Family & Dependents", helper: "school fees, childcare, elderly care" },
-  { key: "health", emoji: "🏥", label: "Health & Protection", helper: "medical, health, term + car insurance" },
-  { key: "daily", emoji: "🛒", label: "Daily Living", helper: "groceries, food, fuel, transport" },
-  { key: "investments", emoji: "📈", label: "Investments & Savings", helper: "SIPs, FDs, RDs, PPF (monthly)" },
-  { key: "discretionary", emoji: "🎉", label: "Discretionary", helper: "dining, travel, entertainment, shopping" },
+  { key: "housing", emoji: "🏠", label: "Rent or current housing cost", helper: "rent, maintenance, current housing cost" },
+  { key: "family", emoji: "🧾", label: "Household groceries and utilities", helper: "groceries, electricity, water, regular utilities" },
+  { key: "health", emoji: "🏥", label: "Medical / health costs", helper: "medical bills and recurring health costs" },
+  { key: "daily", emoji: "🚌", label: "Transportation", helper: "fuel, commute, vehicle running costs" },
+  { key: "investments", emoji: "🎓", label: "School / education fees", helper: "school, education, classes, learning costs" },
+  { key: "discretionary", emoji: "🎉", label: "Entertainment, dining and other living expenses", helper: "dining, entertainment, shopping, other regular living costs" },
 ];
 
 export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpgradeRequired }: Props) {
@@ -115,7 +116,6 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
       "expenses.family",
       "expenses.health",
       "expenses.daily",
-      "expenses.investments",
       "expenses.discretionary",
     ]));
     setMessage({
@@ -159,7 +159,9 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
   };
 
   const income = totalIncome(value);
-  const outflow = totalOutflow(value);
+  const livingExpenses = totalExpenses(value);
+  const existingEmis = totalCommitments(value);
+  const outflow = livingExpenses + existingEmis;
   const net = surplus(value);
 
   return (
@@ -171,7 +173,7 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
             <Badge variant="secondary">{proBadgeText()}</Badge>
           </div>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Upload your last 3-6 months of bank statements. Our AI will auto-detect your income, expenses, EMIs and investments.
+            Upload your last 3-6 months of statements. Our AI will auto-detect your income, living expenses, and EMIs.
           </p>
         </div>
         <input
@@ -301,12 +303,7 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
               onValueChange={(n) => set("commitments", { emis: n })}
             />
           </Field>
-          <Field label="Insurance premiums total / month" ai={aiFields.has("commitments.insurance")}>
-            <CurrencyInput
-              value={value.commitments.insurance}
-              onValueChange={(n) => set("commitments", { insurance: n })}
-            />
-          </Field>
+
         </div>
       </section>
 
@@ -314,7 +311,7 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
       <section>
         <h2 className="text-base font-semibold text-foreground">Monthly Expenses</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Enter your typical monthly spend per category
+Enter only regular living costs. Investments are captured separately in the next step.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {EXPENSE_CARDS.map((c) => (
@@ -355,7 +352,8 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
         <h3 className="text-base font-semibold text-foreground">Monthly Summary</h3>
         <dl className="mt-4 space-y-2.5 text-sm">
           <Row label="Total Income" value={formatINR(income)} />
-          <Row label="Total Expenses + Commitments" value={formatINR(outflow)} />
+          <Row label="Monthly Expenses" value={formatINR(livingExpenses)} />
+          <Row label="Existing Loan EMIs" value={formatINR(existingEmis)} />
           <div className="my-2 h-px bg-border" />
           <Row
             label="Current Monthly Surplus"
