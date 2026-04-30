@@ -421,7 +421,7 @@ function CorpusBuilder({ finances, investments, home, planSurplus, onSafetyAlloc
   React.useEffect(() => setTimeline(Math.max(1, home.possessionMonth)), [home.possessionMonth]);
 
   const selected = new Set(allocations.map((item) => item.id));
-  const result = React.useMemo(() => buildCombinedProjection(allocations, timeline, existing.projectedCorpus), [allocations, timeline, existing.projectedCorpus]);
+  const result = React.useMemo(() => buildCombinedProjection(allocations, timeline, existing.projectedCorpus, target), [allocations, timeline, existing.projectedCorpus, target]);
   const totalMonthly = allocations.reduce((sum, item) => sum + (isMonthlyRoute(item.id) ? item.amount : 0), 0);
   const diff = result.final - target;
   const surplusDelta = Math.abs(planSurplus - totalMonthly);
@@ -580,12 +580,12 @@ function SliderField({ label, value, min, max, onChange }: { label: string; valu
   return <div><div className="mb-3 flex items-center justify-between gap-3"><p className="text-sm font-semibold text-foreground">{label}</p><span className="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-bold text-primary-soft-foreground">{value}</span></div><Slider value={[value]} min={min} max={max} step={1} onValueChange={([next]) => onChange(next ?? min)} /></div>;
 }
 
-function buildCombinedProjection(allocations: RouteAllocation[], timeline: number, existingProjected: number) {
+function buildCombinedProjection(allocations: RouteAllocation[], timeline: number, existingProjected: number, target: number) {
   const months = Math.max(1, Math.round(timeline || 1));
   const points = Array.from({ length: months }, (_, index) => {
     const month = index + 1;
     const routeTotal = allocations.reduce((sum, item) => sum + routeValueAtMonth(item, month), 0);
-    return { month, total: routeTotal + (existingProjected * month) / months, target: undefined as number | undefined };
+    return { month, total: routeTotal + (existingProjected * month) / months, target };
   });
   const last = points[points.length - 1];
   const breakdown = allocations.map((item) => ({ id: item.id, value: routeValueAtMonth(item, months) }));
