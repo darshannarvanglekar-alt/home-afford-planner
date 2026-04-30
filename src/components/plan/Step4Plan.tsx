@@ -158,6 +158,11 @@ export function Step4Plan({
         <p className="mt-2 text-sm text-muted-foreground">
           Here is how this home purchase fits your monthly cash flow.
         </p>
+        {plan.surplusBeforeEmi <= 0 ? (
+          <p className="mt-2 text-sm font-semibold text-destructive">
+            Your current expenses exceed your income. Please review your numbers.
+          </p>
+        ) : null}
       </header>
 
       <section className={cn("rounded-2xl border p-5 shadow-soft sm:p-6", verdictTone.className)}>
