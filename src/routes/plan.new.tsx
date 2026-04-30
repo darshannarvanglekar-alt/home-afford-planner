@@ -236,11 +236,52 @@ function PlanWizardPage() {
   };
 
   const calculatePlan = () => {
-    setCalculating(true);
-    window.setTimeout(() => {
+    try {
+      const parsedFinances = financesSchema.safeParse(finances);
+      const parsedInvestments = investmentsSchema.safeParse(investments ?? []);
+      const parsedHome = homeSchema.safeParse(home);
+      const parsedProfile = profileSchema.safeParse(profile);
+
+      if (!parsedFinances.success) {
+        console.error("Calculate My Plan blocked by finances validation", parsedFinances.error.flatten());
+        setValidationError("Please review the Your Finances fields before calculating your plan.");
+        toast.error("Please review the Your Finances fields before calculating your plan");
+        return;
+      }
+      if (!parsedInvestments.success) {
+        console.error(
+          "Calculate My Plan blocked by current investments validation",
+          parsedInvestments.error.flatten(),
+        );
+        setValidationError("Please review the My Current Investments fields before calculating your plan.");
+        toast.error("Please review the My Current Investments fields before calculating your plan");
+        return;
+      }
+      if (!parsedHome.success) {
+        console.error("Calculate My Plan blocked by home validation", parsedHome.error.flatten());
+        setValidationError("Please review the Your Home fields before calculating your plan.");
+        toast.error("Please review the Your Home fields before calculating your plan");
+        return;
+      }
+      if (!parsedProfile.success) {
+        console.error("Calculate My Plan blocked by profile validation", parsedProfile.error.flatten());
+        setValidationError("Please review the Your Profile fields before calculating your plan.");
+        toast.error("Please review the Your Profile fields before calculating your plan");
+        return;
+      }
+
+      setValidationError("");
+      setCalculating(true);
+      window.setTimeout(() => {
+        setCalculating(false);
+        goToStep(5);
+      }, 2300);
+    } catch (error) {
+      console.error("Calculate My Plan failed", error);
       setCalculating(false);
-      goToStep(4);
-    }, 2300);
+      setValidationError("Something went wrong while calculating your plan. Please review your numbers.");
+      toast.error("Something went wrong while calculating your plan. Please review your numbers");
+    }
   };
 
   const requestUpgrade = (message: string) => setUpgradeMessage(message);
