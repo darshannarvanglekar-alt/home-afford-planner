@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AlertCircle, Banknote, ChevronDown, Coins, GitCompareArrows, Landmark, Layers3, Loader2, Pencil, RefreshCw, Shield, ShieldCheck, TrendingUp, TriangleAlert, WalletCards } from "lucide-react";
+import { AlertCircle, Banknote, Check, ChevronDown, Coins, GitCompareArrows, Landmark, Layers3, Loader2, Pencil, RefreshCw, Shield, ShieldCheck, TrendingUp, TriangleAlert, WalletCards } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Progress } from "@/components/ui/progress";
@@ -14,16 +14,19 @@ import {
   calcEMI,
   calculateAffordabilityPlan,
   formatINR,
+  type CurrentInvestment,
   type Finances,
   type Home,
   loanAmount,
   type Profile,
   totalCommitments,
+  summarizeInvestments,
   totalExpenses,
 } from "@/lib/plan-schema";
 
 interface Props {
   finances: Finances;
+  investments: CurrentInvestment[];
   home: Home;
   profile: Profile;
   onFinancesChange?: (finances: Finances) => void;
@@ -35,12 +38,16 @@ interface Props {
   onUpgradeRequired?: (message: string) => void;
 }
 
-export function Step4Plan({ finances, home, profile, onFinancesChange, onHomeChange, onProfileChange, planName = "", onPlanNameChange, canUseProFeatures = true, onUpgradeRequired }: Props) {
+export function Step4Plan({ finances, investments, home, profile, onFinancesChange, onHomeChange, onProfileChange, planName = "", onPlanNameChange, canUseProFeatures = true, onUpgradeRequired }: Props) {
   const [open, setOpen] = React.useState(true);
   const [editingName, setEditingName] = React.useState(false);
   const [draftName, setDraftName] = React.useState(planName);
   const [safetyAllocation, setSafetyAllocation] = React.useState(0);
   const plan = React.useMemo(() => calculateAffordabilityPlan(finances, home, profile), [finances, home, profile]);
+  const investmentSummary = React.useMemo(() => summarizeInvestments(investments, home.possessionMonth), [investments, home.possessionMonth]);
+  const targetCorpus = Math.max(100000, home.downPayment + home.registrationStampDuty + home.interiorBudget);
+  const corpusCoveredPct = targetCorpus > 0 ? Math.min(100, (investmentSummary.projectedCorpus / targetCorpus) * 100) : 0;
+  const additionalCorpusNeeded = Math.max(0, targetCorpus - investmentSummary.projectedCorpus);
   const verdictTone = {
     safe: {
       label: "SAFE",
@@ -117,6 +124,8 @@ export function Step4Plan({ finances, home, profile, onFinancesChange, onHomeCha
           <li>• Monthly surplus after EMI: {formatINR(plan.surplusAfterEmi)}</li>
           <li>• EMI as % of income: {plan.emiToIncomePct.toFixed(1)}%</li>
           <li>• Emergency fund: {plan.emergencyStatus}</li>
+          <li>• Existing investments projected corpus by possession / purchase date: {formatINR(investmentSummary.projectedCorpus)}</li>
+          <li>• Additional corpus needed: {formatINR(additionalCorpusNeeded)}</li>
         </ul>
       </section>
 
@@ -133,6 +142,7 @@ export function Step4Plan({ finances, home, profile, onFinancesChange, onHomeCha
           valueClassName={ratioTone}
         />
         <MetricCard label="Emergency Fund Needed" value={formatINR(plan.emergencyFundNeeded)} />
+        <MetricCard label="Target Covered" value={`${corpusCoveredPct.toFixed(0)}%`} valueClassName="text-success" />
       </section>
 
       {safetyAllocation > 0 && (
@@ -148,9 +158,9 @@ export function Step4Plan({ finances, home, profile, onFinancesChange, onHomeCha
         </Link>
       </Button>
 
-      <SmartSuggestionsPanel finances={finances} home={home} profile={profile} onFinancesChange={onFinancesChange} onHomeChange={onHomeChange} onProfileChange={onProfileChange} canUseProFeatures={canUseProFeatures} onUpgradeRequired={onUpgradeRequired} />
+      <SmartSuggestionsPanel finances={finances} investments={investments} home={home} profile={profile} onFinancesChange={onFinancesChange} onHomeChange={onHomeChange} onProfileChange={onProfileChange} canUseProFeatures={canUseProFeatures} onUpgradeRequired={onUpgradeRequired} />
 
-      <CorpusBuilder finances={finances} home={home} planSurplus={plan.surplusAfterEmi} onSafetyAllocation={setSafetyAllocation} />
+      <CorpusBuilder finances={finances} investments={investments} home={home} planSurplus={plan.surplusAfterEmi} onSafetyAllocation={setSafetyAllocation} />
 
       <section className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
         <Button
@@ -203,7 +213,7 @@ interface SmartSuggestion {
   }>;
 }
 
-function SmartSuggestionsPanel({ finances, home, profile, onFinancesChange, onHomeChange, onProfileChange, canUseProFeatures = true, onUpgradeRequired }: Props) {
+function SmartSuggestionsPanel({ finances, investments, home, profile, onFinancesChange, onHomeChange, onProfileChange, canUseProFeatures = true, onUpgradeRequired }: Props) {
   const [suggestions, setSuggestions] = React.useState<SmartSuggestion[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
@@ -221,7 +231,8 @@ function SmartSuggestionsPanel({ finances, home, profile, onFinancesChange, onHo
       const principal = loanAmount(home);
       const totalInterest = Math.max(0, calcEMI(principal, home.interestRateA, home.tenureYears) * home.tenureYears * 12 - principal);
       const targetCorpus = Math.max(100000, home.downPayment + home.registrationStampDuty + home.interiorBudget);
-      const projectedCorpus = futureValueMonthly(finances.expenses.investments, 10, Math.max(1, home.possessionMonth), false, 0);
+      const currentInvestmentSummary = summarizeInvestments(investments, home.possessionMonth);
+      const projectedCorpus = currentInvestmentSummary.projectedCorpus;
       const response = await fetch("/api/generate-plan-suggestions", {
         method: "POST",
         headers: {
@@ -235,7 +246,10 @@ function SmartSuggestionsPanel({ finances, home, profile, onFinancesChange, onHo
             existingEMIs: finances.commitments.emis,
             newEMI: plan.newEmi,
             surplus: plan.surplusAfterEmi,
-            investments: finances.expenses.investments,
+            investments: currentInvestmentSummary.monthlyCommitment,
+            existingInvestmentCorpusToday: currentInvestmentSummary.currentCorpus,
+            existingInvestmentProjectedCorpus: currentInvestmentSummary.projectedCorpus,
+            existingInvestmentCoveragePct: targetCorpus > 0 ? Math.min(100, (currentInvestmentSummary.projectedCorpus / targetCorpus) * 100) : 0,
             targetCorpus,
             projectedCorpus,
             corpusGap: Math.max(0, targetCorpus - projectedCorpus),
@@ -268,7 +282,7 @@ function SmartSuggestionsPanel({ finances, home, profile, onFinancesChange, onHo
     } finally {
       setLoading(false);
     }
-  }, [finances, home, profile, plan.emiToIncomePct, plan.emergencyFundNeeded, plan.newEmi, plan.surplusAfterEmi, plan.totalIncome, plan.verdict]);
+  }, [finances, investments, home, profile, plan.emiToIncomePct, plan.emergencyFundNeeded, plan.newEmi, plan.surplusAfterEmi, plan.totalIncome, plan.verdict]);
 
   React.useEffect(() => {
     if (!canUseProFeatures) return;
@@ -279,7 +293,7 @@ function SmartSuggestionsPanel({ finances, home, profile, onFinancesChange, onHo
     if (!suggestion.simulation) return;
     if (!originalValues) setOriginalValues({ finances, home, profile });
     if (typeof suggestion.simulation.monthlyInvestment === "number") {
-      onFinancesChange?.({ ...finances, expenses: { ...finances.expenses, investments: Math.max(0, Math.round(suggestion.simulation.monthlyInvestment)) } });
+      console.info("Scenario simulation monthly investment amount", Math.max(0, Math.round(suggestion.simulation.monthlyInvestment)));
     }
     if (typeof suggestion.simulation.downPayment === "number" || typeof suggestion.simulation.possessionMonth === "number") {
       onHomeChange?.({
