@@ -275,11 +275,38 @@ function SmartSuggestionsPanel({ finances, home, profile, onFinancesChange, onHo
     void generateSuggestions();
   }, [canUseProFeatures, generateSuggestions]);
 
+  const applySuggestion = (suggestion: SmartSuggestion) => {
+    if (!suggestion.simulation) return;
+    if (!originalValues) setOriginalValues({ finances, home, profile });
+    if (typeof suggestion.simulation.monthlyInvestment === "number") {
+      onFinancesChange?.({ ...finances, expenses: { ...finances.expenses, investments: Math.max(0, Math.round(suggestion.simulation.monthlyInvestment)) } });
+    }
+    if (typeof suggestion.simulation.downPayment === "number" || typeof suggestion.simulation.possessionMonth === "number") {
+      onHomeChange?.({
+        ...home,
+        downPayment: typeof suggestion.simulation.downPayment === "number" ? Math.max(0, Math.round(suggestion.simulation.downPayment)) : home.downPayment,
+        possessionMonth: typeof suggestion.simulation.possessionMonth === "number" ? Math.max(1, Math.round(suggestion.simulation.possessionMonth)) : home.possessionMonth,
+      });
+    }
+    if (suggestion.simulation.emergencyFundPref) {
+      onProfileChange?.({ ...profile, emergencyFundPref: suggestion.simulation.emergencyFundPref });
+    }
+  };
+
+  const restoreOriginalValues = () => {
+    if (!originalValues) return;
+    onFinancesChange?.(originalValues.finances);
+    onHomeChange?.(originalValues.home);
+    onProfileChange?.(originalValues.profile);
+    setOriginalValues(null);
+  };
+
   if (!canUseProFeatures) {
     return (
       <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
         <div className="pointer-events-none select-none blur-sm">
-          <h2 className="text-xl font-extrabold text-foreground sm:text-2xl">✨ Your Personalised Action Plan</h2>
+          <h2 className="text-xl font-extrabold text-foreground sm:text-2xl">Ways to Improve Your Plan</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Based on your numbers, here are scenarios worth exploring.</p>
           <div className="mt-5 space-y-3">
             {Array.from({ length: 3 }).map((_, index) => (
               <div key={index} className="rounded-xl border border-border bg-muted/40 p-4">
@@ -292,8 +319,8 @@ function SmartSuggestionsPanel({ finances, home, profile, onFinancesChange, onHo
         </div>
         <div className="absolute inset-0 flex items-center justify-center bg-background/70 p-6 backdrop-blur-sm">
           <div className="max-w-sm text-center">
-            <p className="text-lg font-extrabold text-foreground">✨ Upgrade to Pro to unlock personalised AI suggestions for your plan.</p>
-            <Button type="button" className="mt-4" onClick={() => onUpgradeRequired?.("AI personalised suggestions are a Pro feature.")}>Upgrade to Pro</Button>
+            <p className="text-lg font-extrabold text-foreground">Upgrade to Pro to unlock scenario suggestions for your plan.</p>
+            <Button type="button" className="mt-4" onClick={() => onUpgradeRequired?.("Scenario suggestions are a Pro feature.")}>Upgrade to Pro</Button>
           </div>
         </div>
       </section>
@@ -304,22 +331,17 @@ function SmartSuggestionsPanel({ finances, home, profile, onFinancesChange, onHo
     <section className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-xl font-extrabold text-foreground sm:text-2xl">✨ Your Personalised Action Plan</h2>
+          <h2 className="text-xl font-extrabold text-foreground sm:text-2xl">Ways to Improve Your Plan</h2>
           <span className="mt-2 inline-flex rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">{proBadgeText()}</span>
-          <p className="mt-1 text-sm text-muted-foreground">AI-generated suggestions based on your actual numbers</p>
+          <p className="mt-1 text-sm text-muted-foreground">Based on your numbers, here are scenarios worth exploring.</p>
         </div>
-        <Button type="button" variant="outline" onClick={generateSuggestions} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Regenerate Suggestions
-        </Button>
       </div>
 
       <div className="mt-5 space-y-3">
         {loading ? (
           <>
-          <p className="text-sm font-medium text-muted-foreground">Generating your personalised suggestions...</p>
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="overflow-hidden rounded-xl border border-border bg-muted/40 p-4">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="min-h-40 overflow-hidden rounded-xl border border-border bg-muted/40 p-4">
               <div className="mb-3 flex items-center gap-3">
                 <div className="h-8 w-8 animate-pulse rounded-full bg-primary/10" />
                 <div className="h-4 w-36 animate-pulse rounded bg-primary/10" />
@@ -332,13 +354,26 @@ function SmartSuggestionsPanel({ finances, home, profile, onFinancesChange, onHo
           ))}
           </>
         ) : error ? (
-          <div className="rounded-xl border border-warning/20 bg-warning-soft p-4 text-sm font-medium text-warning-soft-foreground">AI analysis is temporarily unavailable. Please fill in the details manually below.</div>
+          <div className="rounded-xl border border-warning/20 bg-warning-soft p-4 text-sm font-medium text-warning-soft-foreground">
+            <p>Suggestions are taking longer than usual. Tap to retry.</p>
+            <Button type="button" variant="outline" className="mt-3" onClick={generateSuggestions}>Retry</Button>
+          </div>
+        ) : suggestions.length === 0 ? (
+          <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">Your plan is already well-optimised. Small tweaks are shown below in case you want to explore further.</div>
         ) : (
-          suggestions.map((suggestion, index) => <SuggestionCard key={`${suggestion.title}-${index}`} suggestion={suggestion} />)
+          suggestions.map((suggestion, index) => <SuggestionCard key={`${suggestion.title}-${index}`} suggestion={suggestion} onSimulate={() => applySuggestion(suggestion)} />)
         )}
       </div>
 
-        <p className="mt-5 text-xs leading-relaxed text-muted-foreground">{DISCLAIMER}</p>
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Button type="button" variant="ghost" className="justify-start px-0" onClick={generateSuggestions} disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          Generate new suggestions →
+        </Button>
+        {originalValues && <Button type="button" variant="ghost" className="justify-start px-0" onClick={restoreOriginalValues}>← Restore my original values</Button>}
+      </div>
+
+      <p className="mt-5 text-xs leading-relaxed text-muted-foreground">{DISCLAIMER}</p>
     </section>
   );
 }
