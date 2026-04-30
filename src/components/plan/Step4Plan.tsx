@@ -18,6 +18,9 @@ import {
   WalletCards,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { SaveScenarioButton } from "@/components/scenarios/SaveScenarioButton";
+import { useAuth } from "@/lib/auth";
+import { listScenarios } from "@/lib/scenarios";
 import {
   CartesianGrid,
   Line,
@@ -163,6 +166,18 @@ export function Step4Plan({
             Your current expenses exceed your income. Please review your numbers.
           </p>
         ) : null}
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <SaveScenarioButton
+            finances={finances}
+            investments={investments}
+            home={home}
+            profile={profile}
+            defaultName={planName}
+            variant="outline"
+            className="min-h-11"
+          />
+          <SavedScenariosBanner />
+        </div>
       </header>
 
       <section className={cn("rounded-2xl border p-5 shadow-soft sm:p-6", verdictTone.className)}>
@@ -1311,5 +1326,29 @@ function MetricCard({
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={cn("mt-2 text-xl font-extrabold text-foreground", valueClassName)}>{value}</p>
     </div>
+  );
+}
+
+function SavedScenariosBanner() {
+  const { user } = useAuth();
+  const [count, setCount] = React.useState(0);
+  React.useEffect(() => {
+    const refresh = () => setCount(listScenarios(user?.id).length);
+    refresh();
+    window.addEventListener("homeafford:scenarios-changed", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("homeafford:scenarios-changed", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, [user?.id]);
+  if (count < 1) return null;
+  return (
+    <Link
+      to="/scenarios"
+      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/15"
+    >
+      You have {count} saved scenario{count === 1 ? "" : "s"}. Compare them →
+    </Link>
   );
 }

@@ -31,6 +31,7 @@ import {
   type Profile,
 } from "@/lib/plan-schema";
 import { suggestPlanName } from "@/lib/plan-display";
+import { takePendingLoad } from "@/lib/scenarios";
 
 const searchSchema = z.object({
   step: fallback(z.number().int().min(1).max(5), 1).default(1),
@@ -71,6 +72,18 @@ function PlanWizardPage() {
       navigate({ to: "/auth" });
     }
   }, [authLoading, session, navigate]);
+
+  // Hydrate from a staged scenario load (from My Scenarios → Load)
+  React.useEffect(() => {
+    const pending = takePendingLoad();
+    if (!pending) return;
+    setFinances(pending.inputs.finances);
+    setInvestments(pending.inputs.investments);
+    setHome(pending.inputs.home);
+    setProfile(pending.inputs.profile);
+    if (pending.name) setPlanName(pending.name);
+    toast.success(`Loaded "${pending.name}"`);
+  }, []);
 
   // Create or load draft plan
   React.useEffect(() => {

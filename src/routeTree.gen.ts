@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ScenariosRouteImport } from './routes/scenarios'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -33,6 +34,11 @@ const TermsRoute = TermsRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScenariosRoute = ScenariosRouteImport.update({
+  id: '/scenarios',
+  path: '/scenarios',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/scenarios': typeof ScenariosRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/scenarios': typeof ScenariosRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/scenarios': typeof ScenariosRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/api/analyze-bank-statement': typeof ApiAnalyzeBankStatementRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/pricing'
     | '/privacy'
+    | '/scenarios'
     | '/settings'
     | '/terms'
     | '/api/analyze-bank-statement'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/pricing'
     | '/privacy'
+    | '/scenarios'
     | '/settings'
     | '/terms'
     | '/api/analyze-bank-statement'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/pricing'
     | '/privacy'
+    | '/scenarios'
     | '/settings'
     | '/terms'
     | '/api/analyze-bank-statement'
@@ -219,6 +231,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
+  ScenariosRoute: typeof ScenariosRoute
   SettingsRoute: typeof SettingsRoute
   TermsRoute: typeof TermsRoute
   ApiAnalyzeBankStatementRoute: typeof ApiAnalyzeBankStatementRoute
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scenarios': {
+      id: '/scenarios'
+      path: '/scenarios'
+      fullPath: '/scenarios'
+      preLoaderRoute: typeof ScenariosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -347,6 +367,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
+  ScenariosRoute: ScenariosRoute,
   SettingsRoute: SettingsRoute,
   TermsRoute: TermsRoute,
   ApiAnalyzeBankStatementRoute: ApiAnalyzeBankStatementRoute,
