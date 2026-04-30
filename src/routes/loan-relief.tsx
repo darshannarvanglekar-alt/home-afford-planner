@@ -506,8 +506,12 @@ function LoanReliefPage() {
             <CardContent className="space-y-5">
               <Tabs value={tab} onValueChange={(v) => setTab(v as "onetime" | "recurring")}>
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="onetime">One-Time Prepayment</TabsTrigger>
-                  <TabsTrigger value="recurring">Regular Extra Payment</TabsTrigger>
+                  <TabsTrigger value="onetime" disabled={combine}>
+                    One-Time Prepayment
+                  </TabsTrigger>
+                  <TabsTrigger value="recurring" disabled={combine}>
+                    Regular Extra Payment
+                  </TabsTrigger>
                 </TabsList>
 
                 <div className="mt-3 flex items-center gap-2">
@@ -521,133 +525,74 @@ function LoanReliefPage() {
                   </Label>
                 </div>
 
-                {(tab === "onetime" || combine) && (
-                  <TabsContent value="onetime" forceMount={combine ? true : undefined} className="mt-5 space-y-5">
-                    <div className="space-y-2">
-                      <Label>Prepayment amount</Label>
-                      <CurrencyInput
-                        value={oneTimeAmount}
-                        onValueChange={setOneTimeAmount}
-                        placeholder="0"
+                {!combine && (
+                  <>
+                    <TabsContent value="onetime" className="mt-5 space-y-5">
+                      <OneTimeBlock
+                        oneTimeAmount={oneTimeAmount}
+                        setOneTimeAmount={setOneTimeAmount}
+                        oneTimeAtMonth={oneTimeAtMonth}
+                        setOneTimeAtMonth={setOneTimeAtMonth}
+                        oneTimeMode={oneTimeMode}
+                        setOneTimeMode={setOneTimeMode}
+                        totalMonths={totalMonths}
+                        startYear={startYear}
+                        startMonth={startMonth}
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>At which month do you plan to prepay?</Label>
-                        <span className="text-sm font-medium text-foreground">
-                          Month {oneTimeAtMonth} —{" "}
-                          {(() => {
-                            const d = new Date(startYear, startMonth - 1 + (oneTimeAtMonth - 1), 1);
-                            return d.toLocaleDateString("en-IN", {
-                              month: "short",
-                              year: "numeric",
-                            });
-                          })()}
-                        </span>
-                      </div>
-                      <Slider
-                        min={1}
-                        max={totalMonths}
-                        step={1}
-                        value={[oneTimeAtMonth]}
-                        onValueChange={(v) => setOneTimeAtMonth(v[0] ?? oneTimeAtMonth)}
+                    </TabsContent>
+                    <TabsContent value="recurring" className="mt-5 space-y-5">
+                      <RecurringBlock
+                        extraMonthly={extraMonthly}
+                        setExtraMonthly={setExtraMonthly}
+                        extraStartMonth={extraStartMonth}
+                        setExtraStartMonth={setExtraStartMonth}
+                        stepUpEnabled={stepUpEnabled}
+                        setStepUpEnabled={setStepUpEnabled}
+                        stepUpPct={stepUpPct}
+                        setStepUpPct={setStepUpPct}
+                        totalMonths={totalMonths}
+                        startYear={startYear}
+                        startMonth={startMonth}
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>After prepayment, what do you prefer?</Label>
-                      <RadioGroup
-                        value={oneTimeMode}
-                        onValueChange={(v) => setOneTimeMode(v as PrepayMode)}
-                        className="gap-3"
-                      >
-                        <div className="flex items-start gap-2">
-                          <RadioGroupItem value="reduce_emi" id="reduce" className="mt-1" />
-                          <Label htmlFor="reduce" className="text-sm font-normal">
-                            Reduce my EMI (keep same tenure, lower monthly payment)
-                          </Label>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <RadioGroupItem value="shorten_tenure" id="shorten" className="mt-1" />
-                          <Label htmlFor="shorten" className="text-sm font-normal">
-                            Close loan faster (keep same EMI, shorter tenure)
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  </TabsContent>
-                )}
-
-                {(tab === "recurring" || combine) && (
-                  <TabsContent value="recurring" forceMount={combine ? true : undefined} className="mt-5 space-y-5">
-                    <div className="space-y-2">
-                      <Label>Extra amount per month above regular EMI</Label>
-                      <CurrencyInput
-                        value={extraMonthly}
-                        onValueChange={setExtraMonthly}
-                        placeholder="0"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>Starting from which month?</Label>
-                        <span className="text-sm font-medium text-foreground">
-                          Month {extraStartMonth} —{" "}
-                          {(() => {
-                            const d = new Date(
-                              startYear,
-                              startMonth - 1 + (extraStartMonth - 1),
-                              1,
-                            );
-                            return d.toLocaleDateString("en-IN", {
-                              month: "short",
-                              year: "numeric",
-                            });
-                          })()}
-                        </span>
-                      </div>
-                      <Slider
-                        min={1}
-                        max={totalMonths}
-                        step={1}
-                        value={[extraStartMonth]}
-                        onValueChange={(v) => setExtraStartMonth(v[0] ?? extraStartMonth)}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                      <div>
-                        <Label htmlFor="stepup" className="text-sm">
-                          Annual step-up on extra payment
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                          Increase extra payment every year
-                        </p>
-                      </div>
-                      <Switch
-                        id="stepup"
-                        checked={stepUpEnabled}
-                        onCheckedChange={setStepUpEnabled}
-                      />
-                    </div>
-                    {stepUpEnabled && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label>Increase extra payment by</Label>
-                          <span className="text-sm font-medium text-foreground">
-                            {stepUpPct}% / year
-                          </span>
-                        </div>
-                        <Slider
-                          min={5}
-                          max={20}
-                          step={1}
-                          value={[stepUpPct]}
-                          onValueChange={(v) => setStepUpPct(v[0] ?? stepUpPct)}
-                        />
-                      </div>
-                    )}
-                  </TabsContent>
+                    </TabsContent>
+                  </>
                 )}
               </Tabs>
+
+              {combine && (
+                <div className="space-y-6">
+                  <div className="space-y-5">
+                    <p className="text-sm font-semibold text-foreground">One-time prepayment</p>
+                    <OneTimeBlock
+                      oneTimeAmount={oneTimeAmount}
+                      setOneTimeAmount={setOneTimeAmount}
+                      oneTimeAtMonth={oneTimeAtMonth}
+                      setOneTimeAtMonth={setOneTimeAtMonth}
+                      oneTimeMode={oneTimeMode}
+                      setOneTimeMode={setOneTimeMode}
+                      totalMonths={totalMonths}
+                      startYear={startYear}
+                      startMonth={startMonth}
+                    />
+                  </div>
+                  <div className="space-y-5 border-t border-border pt-5">
+                    <p className="text-sm font-semibold text-foreground">Regular extra payment</p>
+                    <RecurringBlock
+                      extraMonthly={extraMonthly}
+                      setExtraMonthly={setExtraMonthly}
+                      extraStartMonth={extraStartMonth}
+                      setExtraStartMonth={setExtraStartMonth}
+                      stepUpEnabled={stepUpEnabled}
+                      setStepUpEnabled={setStepUpEnabled}
+                      stepUpPct={stepUpPct}
+                      setStepUpPct={setStepUpPct}
+                      totalMonths={totalMonths}
+                      startYear={startYear}
+                      startMonth={startMonth}
+                    />
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
