@@ -188,6 +188,7 @@ export function Step4Plan({
             investments={investments}
             home={home}
             profile={profile}
+            safetyAllocation={safetyAllocation}
             defaultName={planName}
             variant="outline"
             className="min-h-11"
