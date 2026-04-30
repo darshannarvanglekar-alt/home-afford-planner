@@ -420,6 +420,12 @@ function PlanWizardPage() {
   );
 }
 
+function formatValidationIssue(section: string, error: z.ZodError) {
+  const firstIssue = error.issues[0];
+  const field = firstIssue?.path.length ? firstIssue.path.join(" → ") : section;
+  return `Please review ${section}: ${field} needs a valid value.`;
+}
+
 function CalculatingPlan() {
   const messages = [
     "Analysing your income and expenses...",
