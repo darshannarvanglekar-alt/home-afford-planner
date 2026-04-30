@@ -6,7 +6,14 @@ const suggestionSchema = z.object({
   icon: z.string().min(1).max(4),
   title: z.string().min(1).max(80),
   explanation: z.string().min(1).max(500),
+  impact: z.string().min(1).max(80),
   type: z.enum(["opportunity", "warning", "action"]),
+  simulation: z.object({
+    monthlyInvestment: z.number().optional(),
+    downPayment: z.number().optional(),
+    possessionMonth: z.number().optional(),
+    emergencyFundPref: z.enum(["conservative", "balanced", "aggressive"]).optional(),
+  }).optional(),
 });
 
 const profileSchema = z.object({
@@ -16,6 +23,10 @@ const profileSchema = z.object({
   newEMI: z.number(),
   surplus: z.number(),
   investments: z.number(),
+  targetCorpus: z.number(),
+  projectedCorpus: z.number(),
+  corpusGap: z.number(),
+  monthsToPurchase: z.number(),
   emergencyFundMode: z.string(),
   emergencyFundTarget: z.number(),
   propertyCost: z.number(),
@@ -36,20 +47,22 @@ const requestSchema = z.object({
   profile: profileSchema,
 });
 
-const SYSTEM_PROMPT = `You generate neutral scenario-planning suggestions for an Indian home affordability simulator. This app is not a financial advisory tool.
-Your job is to give clear, numbers-driven scenario observations to help a family understand home purchase affordability.
+const SYSTEM_PROMPT = `You generate neutral scenario-planning suggestion cards for an Indian home affordability scenario simulator. This app is not a financial advisory tool.
+Your job is to suggest only numerical changes to user-entered amounts, timelines, or contribution patterns.
 
-You will receive the user's complete financial profile. Generate 4 to 6 personalised suggestions in JSON format.
+You will receive the user's complete financial profile. Generate 3 to 5 meaningful suggestions in JSON format. If the plan is already well-optimised and no meaningful numerical scenario exists, return an empty JSON array.
 
 Rules:
 - Use actual rupee numbers from the data
 - Be specific — never vague
-- Be honest — if something is risky, say so
-- Focus on: monthly investment, fixed return saving, lump sum investment, chit-style pooled saving, gold accumulation, blended approach, emergency fund protection, expense optimisation
+- Only suggest numerical adjustments to amounts, timelines, or contribution patterns
+- Always show the mathematical impact of each suggestion
+- Keep each suggestion explanation to 2 sentences maximum
+- Always frame suggestions as "If you..." or "Your corpus is projected to..."
+- All projections must be labelled or phrased as illustrative scenarios based on assumed rates
 - Never mention any bank, lender, AMC, mutual fund, insurance company, investment brand, or financial platform by name
 - Never promote any product or provider
-- Never use language like "we recommend", "best option", "you should invest in", "advisor", "advice", "SIP", "SWP", "mutual fund", "bank", or "loan provider"
-- Label all projections as illustrative scenarios based on assumed rates
+- Never use language like "we recommend", "best option", "you should invest in", "advisor", "advice", "SIP", "SWP", "mutual fund", "bank", "lender", "AMC", "insurance company", "platform", "portfolio", "fund", or "loan provider"
 - Keep each suggestion under 60 words
 - Use neutral planning language, not advisory language
 - Return ONLY this JSON array:
@@ -58,18 +71,22 @@ Rules:
     "icon": "single emoji",
     "title": "bold one-liner under 8 words",
     "explanation": "2-3 sentences with actual ₹ amounts, specific and actionable",
+    "impact": "short chip text like 8 months faster or Saves ₹4.2L interest",
+    "simulation": { "monthlyInvestment": 18000, "downPayment": 1200000, "possessionMonth": 30, "emergencyFundPref": "conservative" },
     "type": "opportunity | warning | action"
   }
 ]
 
 Generate suggestions covering these areas where relevant:
-1. Monthly investment scenario: If surplus > 5000, model 30% of surplus as monthly investment at an assumed 12% annual return after 5 years.
-2. Extra repayment scenario: Calculate an annual extra payment equal to 1 month EMI and approximate tenure or interest impact.
-3. Lump sum investment scenario: If current investments > 0, project corpus after 10 years at an assumed 12% annual return and show possible cash-flow support.
-4. Interest sensitivity scenario: Compare total interest at current rate vs 0.5% lower without naming any provider.
-5. Safety buffer scenario: If target is not comfortably met, calculate months to build it using current surplus.
-6. Health insurance suggestion: If health insurance is No, explain realistic family floater annual cost range in India and EMI protection impact.
-7. Expense optimisation: If discretionary spend is above 15% of income, calculate impact of a 20% reduction.`;
+1. Increase monthly contribution: if corpus gap exists and surplus allows higher monthly contribution.
+2. Annual step-up contribution: if corpus gap exists, model a 10% yearly increase using monthlyInvestment as the updated first amount.
+3. Extend timeline before purchase: if corpus is significantly short and timeline is under 24 months.
+4. Add safety buffer first: if safety buffer is not protected and surplus allows a small monthly set-aside.
+5. Partial prepayment at possession: if projected corpus exceeds target meaningfully.
+6. Split corpus between prepayment and monthly withdrawal: only if corpus surplus is large enough; avoid naming any product or provider.
+7. Reduce loan amount by increasing down payment: if projected corpus exceeds target.
+
+For simulation, include only fields that should change in the simulator. Use the user's current values as a base.`;
 
 export const Route = createFileRoute("/api/generate-plan-suggestions")({
   server: {
@@ -88,9 +105,8 @@ export const Route = createFileRoute("/api/generate-plan-suggestions")({
 
           const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
           const suggestions = parseSuggestions(payload.choices?.[0]?.message?.content ?? "");
-          if (suggestions.length === 0) return jsonError("We couldn't generate suggestions right now.", 422);
 
-          return Response.json({ suggestions: suggestions.slice(0, 6) });
+          return Response.json({ suggestions: suggestions.slice(0, 5) });
         } catch (error) {
           const message = error instanceof Error ? error.message : "We couldn't generate suggestions right now.";
           return jsonError(message, message.includes("sign in") ? 401 : 500);
