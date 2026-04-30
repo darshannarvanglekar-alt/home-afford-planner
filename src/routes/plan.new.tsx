@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { WizardProgress } from "@/components/plan/WizardProgress";
 import { Step1Finances } from "@/components/plan/Step1Finances";
+import { StepCurrentInvestments } from "@/components/plan/StepCurrentInvestments";
 import { Step2Home } from "@/components/plan/Step2Home";
 import { Step3Profile } from "@/components/plan/Step3Profile";
 import { Step4Plan } from "@/components/plan/Step4Plan";
@@ -22,15 +23,17 @@ import {
   defaultProfile,
   financesSchema,
   homeSchema,
+  investmentsSchema,
   profileSchema,
   type Finances,
+  type CurrentInvestment,
   type Home,
   type Profile,
 } from "@/lib/plan-schema";
 import { suggestPlanName } from "@/lib/plan-display";
 
 const searchSchema = z.object({
-  step: fallback(z.number().int().min(1).max(4), 1).default(1),
+  step: fallback(z.number().int().min(1).max(5), 1).default(1),
   planId: fallback(z.string().uuid().optional(), undefined),
 });
 
@@ -51,6 +54,7 @@ function PlanWizardPage() {
   const { step, planId } = Route.useSearch();
 
   const [finances, setFinances] = React.useState<Finances>(defaultFinances);
+  const [investments, setInvestments] = React.useState<CurrentInvestment[]>([]);
   const [home, setHome] = React.useState<Home>(defaultHome);
   const [profile, setProfile] = React.useState<Profile>(defaultProfile);
   const [planName, setPlanName] = React.useState("");
@@ -92,10 +96,13 @@ function PlanWizardPage() {
         const blob = (data.data ?? {}) as {
           finances?: unknown;
           home?: unknown;
+          investments?: unknown;
           profile?: unknown;
         };
         const parsedF = financesSchema.safeParse(blob.finances);
         if (parsedF.success) setFinances(parsedF.data);
+        const parsedI = investmentsSchema.safeParse(blob.investments);
+        if (parsedI.success) setInvestments(parsedI.data);
         const parsedH = homeSchema.safeParse(blob.home);
         if (parsedH.success) setHome(parsedH.data);
         const parsedP = profileSchema.safeParse(blob.profile);
@@ -152,7 +159,7 @@ function PlanWizardPage() {
       const nextName = planName.trim() && planName !== "Untitled plan" ? planName : suggestPlanName(home);
       const { error } = await supabase
         .from("plans")
-        .update({ name: nextName, data: { finances, home, profile } })
+        .update({ name: nextName, data: { finances, investments, home, profile } })
         .eq("id", planId);
       if (error) {
         setSaveState("idle");
@@ -168,7 +175,7 @@ function PlanWizardPage() {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [finances, home, profile, planId, planName, planReady]);
+  }, [finances, investments, home, profile, planId, planName, planReady]);
 
   const updatePlanName = async (name: string) => {
     if (!planId) return;
@@ -205,7 +212,7 @@ function PlanWizardPage() {
       toast.error("Please enter your monthly salary to continue");
       return false;
     }
-    if (step === 2) {
+    if (step === 3) {
       if (home.propertyCost <= 0) {
         setValidationError("Please enter the Property Cost to continue.");
         return toast.error("Please enter the property cost to continue"), false;
@@ -258,11 +265,13 @@ function PlanWizardPage() {
           {step === 1 ? (
             <Step1Finances value={finances} onChange={setFinances} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
           ) : step === 2 ? (
-            <Step2Home value={home} onChange={setHome} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
+            <StepCurrentInvestments value={investments} possessionMonth={home.possessionMonth} onChange={setInvestments} />
           ) : step === 3 ? (
-            <Step3Profile value={profile} onChange={setProfile} />
+            <Step2Home value={home} onChange={setHome} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
           ) : step === 4 ? (
-            <Step4Plan finances={finances} home={home} profile={profile} onFinancesChange={setFinances} onHomeChange={setHome} onProfileChange={setProfile} planName={planName} onPlanNameChange={(name) => void updatePlanName(name)} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
+            <Step3Profile value={profile} onChange={setProfile} />
+          ) : step === 5 ? (
+            <Step4Plan finances={finances} investments={investments} home={home} profile={profile} onFinancesChange={setFinances} onHomeChange={setHome} onProfileChange={setProfile} planName={planName} onPlanNameChange={(name) => void updatePlanName(name)} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
           ) : (
             <ComingSoon step={step} />
           )}
@@ -292,7 +301,7 @@ function PlanWizardPage() {
             )}
           </Button>
 
-          {step < 4 ? (
+          {step < 5 ? (
             <div className="flex flex-col items-stretch gap-2 sm:items-end">
               {validationError ? <p className="text-sm font-medium text-destructive">{validationError}</p> : null}
               <Button
@@ -300,14 +309,16 @@ function PlanWizardPage() {
                 className={step === 3 ? "h-12 px-8 text-base font-semibold" : undefined}
                 onClick={() => {
                   if (!validateStep()) return;
-                  step === 3 ? calculatePlan() : goToStep(step + 1);
+                  step === 4 ? calculatePlan() : goToStep(step + 1);
                 }}
               >
                 {step === 1
-                  ? "Next: Your Home"
+                  ? "Next: My Current Investments"
                   : step === 2
-                    ? "Next: Your Profile"
-                    : "Calculate My Plan"}
+                    ? "Next: Your Home"
+                    : step === 3
+                      ? "Next: Your Profile"
+                      : "Calculate My Plan"}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
@@ -372,9 +383,10 @@ function SaveIndicator({ state }: { state: "idle" | "saving" | "saved" }) {
 
 function ComingSoon({ step }: { step: number }) {
   const titles: Record<number, string> = {
-    2: "Your Home",
-    3: "Your Profile",
-    4: "Your Plan",
+    2: "My Current Investments",
+    3: "Your Home",
+    4: "Your Profile",
+    5: "Your Plan",
   };
   return (
     <div className="rounded-2xl border border-dashed border-border bg-card/50 p-12 text-center">
