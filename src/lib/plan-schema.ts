@@ -47,17 +47,21 @@ export const defaultHome: Home = {
 };
 
 export function loanAmount(h: Home): number {
-  return Math.max(0, (h.propertyCost || 0) - (h.downPayment || 0));
+  return Math.max(0, safeNumber(h.propertyCost) - safeNumber(h.downPayment));
 }
 
 export function calcEMI(principal: number, annualRatePct: number, tenureYears: number): number {
-  if (!principal || principal <= 0) return 0;
-  if (!tenureYears || tenureYears <= 0) return 0;
-  const n = tenureYears * 12;
-  const r = annualRatePct / 12 / 100;
-  if (r === 0) return principal / n;
+  const safePrincipal = safeNumber(principal);
+  const safeRate = safeNumber(annualRatePct);
+  const safeTenure = safeNumber(tenureYears);
+  if (!safePrincipal || safePrincipal <= 0) return 0;
+  if (!safeTenure || safeTenure <= 0) return 0;
+  const n = safeTenure * 12;
+  const r = safeRate / 12 / 100;
+  if (r === 0) return safePrincipal / n;
   const pow = Math.pow(1 + r, n);
-  return (principal * r * pow) / (pow - 1);
+  const emi = (safePrincipal * r * pow) / (pow - 1);
+  return Number.isFinite(emi) ? emi : 0;
 }
 
 export const financesSchema = z.object({
@@ -104,17 +108,21 @@ export function formatINR(n: number): string {
 
 export function totalIncome(f: Finances): number {
   const i = f.income;
-  return (i.primarySalary || 0) + (i.additionalIncome || 0) + (i.familyContribution || 0);
+  return safeNumber(i.primarySalary) + safeNumber(i.additionalIncome) + safeNumber(i.familyContribution);
 }
 
 export function totalCommitments(f: Finances): number {
-  return f.commitments.emis || 0;
+  return safeNumber(f.commitments.emis);
 }
 
 export function totalExpenses(f: Finances): number {
   const e = f.expenses;
   return (
-    (e.housing || 0) + (e.family || 0) + (e.health || 0) + (e.daily || 0) + (e.discretionary || 0)
+    safeNumber(e.housing) +
+    safeNumber(e.family) +
+    safeNumber(e.health) +
+    safeNumber(e.daily) +
+    safeNumber(e.discretionary)
   );
 }
 
@@ -123,7 +131,12 @@ export function totalOutflow(f: Finances): number {
 }
 
 export function surplus(f: Finances): number {
-  return totalIncome(f) - totalOutflow(f);
+  const value = totalIncome(f) - totalOutflow(f);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function safeNumber(value: number): number {
+  return Number.isFinite(value) ? value : 0;
 }
 
 export const INVESTMENT_TYPES = [

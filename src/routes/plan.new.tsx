@@ -236,11 +236,56 @@ function PlanWizardPage() {
   };
 
   const calculatePlan = () => {
-    setCalculating(true);
-    window.setTimeout(() => {
+    try {
+      const parsedFinances = financesSchema.safeParse(finances);
+      const parsedInvestments = investmentsSchema.safeParse(investments ?? []);
+      const parsedHome = homeSchema.safeParse(home);
+      const parsedProfile = profileSchema.safeParse(profile);
+
+      if (!parsedFinances.success) {
+        const message = formatValidationIssue("Your Finances", parsedFinances.error);
+        console.error("Calculate My Plan blocked by finances validation", parsedFinances.error.flatten());
+        setValidationError(message);
+        toast.error(message);
+        return;
+      }
+      if (!parsedInvestments.success) {
+        const message = formatValidationIssue("My Current Investments", parsedInvestments.error);
+        console.error(
+          "Calculate My Plan blocked by current investments validation",
+          parsedInvestments.error.flatten(),
+        );
+        setValidationError(message);
+        toast.error(message);
+        return;
+      }
+      if (!parsedHome.success) {
+        const message = formatValidationIssue("Your Home", parsedHome.error);
+        console.error("Calculate My Plan blocked by home validation", parsedHome.error.flatten());
+        setValidationError(message);
+        toast.error(message);
+        return;
+      }
+      if (!parsedProfile.success) {
+        const message = formatValidationIssue("Your Profile", parsedProfile.error);
+        console.error("Calculate My Plan blocked by profile validation", parsedProfile.error.flatten());
+        setValidationError(message);
+        toast.error(message);
+        return;
+      }
+
+      setValidationError("");
+      setCalculating(true);
+      window.setTimeout(() => {
+        setCalculating(false);
+        goToStep(5);
+      }, 2300);
+    } catch (error) {
+      console.error("Calculate My Plan failed", error);
       setCalculating(false);
-      goToStep(4);
-    }, 2300);
+      setValidationError("Something went wrong while calculating your plan. Please review your numbers.");
+      toast.error("Something went wrong while calculating your plan. Please review your numbers");
+    }
   };
 
   const requestUpgrade = (message: string) => setUpgradeMessage(message);
@@ -373,6 +418,12 @@ function PlanWizardPage() {
       />
     </div>
   );
+}
+
+function formatValidationIssue(section: string, error: z.ZodError) {
+  const firstIssue = error.issues[0];
+  const field = firstIssue?.path.length ? firstIssue.path.join(" → ") : section;
+  return `Please review ${section}: ${field} needs a valid value.`;
 }
 
 function CalculatingPlan() {
