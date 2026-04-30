@@ -22,7 +22,7 @@ declare global {
 
 const FEATURES = [
   "Unlimited saved plans",
-  "AI bank statement upload",
+  "AI statement upload",
   "AI builder PDF extraction",
   "AI personalised suggestions",
   "Scenario simulator",
@@ -119,7 +119,7 @@ export function UpgradeModal({
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          Cancel anytime. No hidden charges. Powered by Razorpay.
+          Cancel anytime. No hidden charges.
         </p>
       </DialogContent>
     </Dialog>
@@ -131,7 +131,7 @@ function PlanCard({ title, price, cadence, note, button, featured, loading, disa
 }) {
   return (
     <article className={cn("relative rounded-2xl border bg-card p-5 shadow-soft", featured ? "border-primary ring-2 ring-primary/15" : "border-border")}>
-      {featured && <Badge className="absolute right-4 top-4">Best Value</Badge>}
+      {featured && <Badge className="absolute right-4 top-4">Popular</Badge>}
       <h3 className="text-lg font-bold text-foreground">{title}</h3>
       <div className="mt-3 flex items-end gap-1">
         <span className="text-3xl font-extrabold text-foreground">{price}</span>

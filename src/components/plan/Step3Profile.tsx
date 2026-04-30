@@ -36,7 +36,7 @@ const FUND_OPTIONS: Array<{
     key: "conservative",
     emoji: "🛡️",
     title: "Conservative",
-    desc: "Keep 6 months of essential expenses always available. Maximum safety. Recommended if you have dependents or elderly parents.",
+    desc: "Keep 6 months of essential expenses always available. Higher safety for dependents or elderly parents.",
   },
   {
     key: "balanced",
@@ -160,7 +160,7 @@ export function Step3Profile({ value, onChange }: Props) {
               <WarningCard
                 tone="amber"
                 icon={<AlertTriangle className="h-4 w-4" />}
-                text="No health insurance detected. A medical emergency without cover can severely impact your home loan plan. We strongly recommend getting health insurance before committing to a home loan."
+                text="No health protection detected. A medical emergency without cover can severely impact your home purchase scenario."
               />
             )}
           </div>
@@ -175,7 +175,7 @@ export function Step3Profile({ value, onChange }: Props) {
               <WarningCard
                 tone="amber"
                 icon={<Lightbulb className="h-4 w-4" />}
-                text="Term insurance is recommended when taking a large home loan. It protects your family if something happens to you."
+                text="A protection plan can help protect your family if something happens to you during a large home loan period."
               />
             )}
           </div>
@@ -261,7 +261,7 @@ export function Step3Profile({ value, onChange }: Props) {
         <div className="mt-4 flex items-start gap-2 rounded-xl bg-primary/5 px-4 py-3 text-sm text-foreground">
           <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span>
-            Based on your profile, we recommend:{" "}
+            Based on your profile, this scenario uses:{" "}
             <span className="font-semibold text-primary">{recLabel}</span>
           </span>
         </div>

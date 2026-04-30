@@ -11,7 +11,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "AI-powered home affordability planner for Indian families. Upload bank statements or enter your numbers and get a real month-by-month plan.",
+          "AI-powered home affordability scenario simulator for Indian families. Upload statements or enter your numbers and get an illustrative month-by-month plan.",
       },
       { property: "og:title", content: "HomeAfford — India's first AI home affordability planner" },
       {
@@ -28,7 +28,7 @@ const features = [
   {
     icon: "📊",
     title: "Real Cash Flow Analysis",
-    body: "We use your actual income, expenses, EMIs and investments. Not just your salary.",
+    body: "We use your actual income, living expenses, EMIs and current investments. Not just your salary.",
   },
   {
     icon: "🏗️",
@@ -53,7 +53,7 @@ const steps = [
   {
     n: 1,
     title: "Upload or Enter",
-    body: "Upload 6 months of bank statements or enter your income and expenses manually. Takes 3 minutes.",
+    body: "Upload 6 months of statements or enter your income and expenses manually. Takes 3 minutes.",
   },
   {
     n: 2,
@@ -90,7 +90,7 @@ function LandingPage() {
             </h1>
 
             <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg">
-              Upload your bank statements or enter your numbers. Get a real
+              Upload your statements or enter your numbers. Get a real
               month-by-month affordability plan — not just an EMI calculator.
             </p>
 
@@ -104,7 +104,7 @@ function LandingPage() {
             </div>
 
             <p className="mt-5 text-xs text-muted-foreground sm:text-sm">
-              🔒 Bank statements deleted after processing. Your data stays private.
+              🔒 Uploaded statements are deleted after processing. Your data stays private.
             </p>
             <p className="mt-3 text-sm font-semibold text-primary">Trusted by 100+ families</p>
           </div>

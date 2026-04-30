@@ -56,7 +56,7 @@ function PricingPage() {
 
         <section className="bg-muted/40">
           <div className="mx-auto grid w-full max-w-5xl gap-4 px-4 py-16 sm:px-6 md:grid-cols-3">
-            <Faq q="Is my bank data safe?" a="Yes. Your statements are analysed instantly and permanently deleted. We never store your financial files." />
+            <Faq q="Is my uploaded data safe?" a="Yes. Your statements are analysed instantly and permanently deleted. We never store your financial files." />
             <Faq q="Can I cancel anytime?" a="Yes. Cancel from your account settings anytime. No questions asked." />
             <Faq q="Is there a free trial?" a="Yes — 1 complete plan is always free. No credit card required." />
           </div>
@@ -68,7 +68,7 @@ function PricingPage() {
 }
 
 function PlanCard({ title, price, subtitle, features, featured }: { title: string; price: string; subtitle: string; features: string[]; featured?: boolean }) {
-  return <article className={`rounded-2xl border bg-card p-6 shadow-soft ${featured ? "border-primary ring-2 ring-primary/15" : "border-border"}`}>{featured && <Badge>Best Value</Badge>}<h2 className="mt-2 text-2xl font-extrabold text-foreground">{title}</h2><p className="mt-3 text-3xl font-extrabold text-primary">{price}</p><p className="text-sm text-muted-foreground">{subtitle}</p><ul className="mt-5 space-y-2 text-sm text-foreground">{features.map((f) => <li key={f} className="flex gap-2"><Check className="h-4 w-4 text-success" />{f}</li>)}</ul><Button asChild className="mt-6 w-full" variant={featured ? "default" : "outline"}><Link to="/auth">Get Started</Link></Button></article>;
+  return <article className={`rounded-2xl border bg-card p-6 shadow-soft ${featured ? "border-primary ring-2 ring-primary/15" : "border-border"}`}>{featured && <Badge>Popular</Badge>}<h2 className="mt-2 text-2xl font-extrabold text-foreground">{title}</h2><p className="mt-3 text-3xl font-extrabold text-primary">{price}</p><p className="text-sm text-muted-foreground">{subtitle}</p><ul className="mt-5 space-y-2 text-sm text-foreground">{features.map((f) => <li key={f} className="flex gap-2"><Check className="h-4 w-4 text-success" />{f}</li>)}</ul><Button asChild className="mt-6 w-full" variant={featured ? "default" : "outline"}><Link to="/auth">Get Started</Link></Button></article>;
 }
 
 function cell(value: string | boolean) { return typeof value === "string" ? <span className="font-semibold text-foreground">{value}</span> : value ? <Check className="mx-auto h-5 w-5 text-success" /> : <X className="mx-auto h-5 w-5 text-destructive" />; }

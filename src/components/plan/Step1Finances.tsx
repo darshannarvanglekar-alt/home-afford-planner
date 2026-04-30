@@ -196,7 +196,7 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
         >
           <Upload className="h-8 w-8 text-primary" />
           <span className="mt-3 text-sm font-semibold text-foreground">
-            📄 Drop your bank statement here or click to upload
+            📄 Drop your statement here or click to upload
           </span>
           <span className="mt-1 text-xs text-muted-foreground">PDF or CSV · up to 6 files · 10MB each</span>
         </button>
@@ -217,7 +217,7 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
           </div>
         )}
         <p className="mt-4 text-xs text-muted-foreground">
-          🔒 Your files are analysed instantly and permanently deleted. We never store your bank statements.
+          🔒 Your files are analysed instantly and permanently deleted. We never store uploaded statements.
         </p>
         {message && (
           <div className={cn(
