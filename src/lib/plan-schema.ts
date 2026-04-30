@@ -118,7 +118,7 @@ export const defaultFinances: Finances = {
     family: 0,
     health: 0,
     daily: 0,
-    investments: 0,
+    schoolFees: 0,
     discretionary: 0,
   },
 };
