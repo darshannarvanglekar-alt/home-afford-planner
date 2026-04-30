@@ -583,7 +583,7 @@ function layerTooltip(index: number) {
   ][index] ?? "Explains this affordability layer";
 }
 
-function SuggestionCard({ suggestion }: { suggestion: SmartSuggestion }) {
+function SuggestionCard({ suggestion, onSimulate }: { suggestion: SmartSuggestion; onSimulate: () => void }) {
   const tone = {
     opportunity: "border-l-success bg-success-soft/45",
     warning: "border-l-warning bg-warning-soft/55",
@@ -594,9 +594,13 @@ function SuggestionCard({ suggestion }: { suggestion: SmartSuggestion }) {
     <article className={cn("rounded-xl border border-border border-l-4 p-4", tone)}>
       <div className="flex items-start gap-3">
         <span className="text-xl leading-none" aria-hidden="true">{suggestion.icon}</span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h3 className="font-extrabold text-foreground">{suggestion.title}</h3>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">{suggestion.explanation}</p>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span className="inline-flex w-fit rounded-full bg-primary-soft px-3 py-1 text-xs font-bold text-primary-soft-foreground">{suggestion.impact}</span>
+            <Button type="button" variant="outline" className="min-h-11" onClick={onSimulate}>Simulate This →</Button>
+          </div>
         </div>
       </div>
     </article>
