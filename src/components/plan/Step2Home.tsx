@@ -19,9 +19,7 @@ import {
   type Home,
   type PropertyType,
   type BuilderStage,
-  calcEMI,
   formatINR,
-  loanAmount,
 } from "@/lib/plan-schema";
 
 interface Props {
@@ -49,7 +47,7 @@ const PROPERTY_OPTIONS: Array<{
   { key: "plot", emoji: "🟫", label: "Plot" },
 ];
 
-const TENURE_OPTIONS = [5, 10, 15, 20, 25, 30];
+// Tenure options moved to Step "Your Loan"
 const POSSESSION_MONTHS = Array.from({ length: 60 }, (_, i) => i + 1);
 
 export function Step2Home({ value, onChange, canUseProFeatures = true, onUpgradeRequired }: Props) {
@@ -63,12 +61,7 @@ export function Step2Home({ value, onChange, canUseProFeatures = true, onUpgrade
   const set = <K extends keyof Home>(k: K, v: Home[K]) =>
     onChange({ ...value, [k]: v });
 
-  const loan = loanAmount(value);
-  const emiA = calcEMI(loan, value.interestRateA, value.tenureYears);
-  const emiB =
-    value.interestRateB && value.interestRateB > 0
-      ? calcEMI(loan, value.interestRateB, value.tenureYears)
-      : null;
+  // EMI/loan computations moved to Step "Your Loan"
 
   const setStage = (id: string, patch: Partial<BuilderStage>) => {
     onChange({
