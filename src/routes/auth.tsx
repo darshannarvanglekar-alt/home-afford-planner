@@ -216,8 +216,17 @@ function AuthPage() {
           </div>
 
           <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">
-            By signing in you agree to our <Link to="/terms" className="font-medium text-primary hover:underline">Terms of Service</Link> and <Link to="/privacy" className="font-medium text-primary hover:underline">Privacy Policy</Link>.
-            <br />🔒 Your bank statements are processed securely and permanently deleted after analysis.
+            By signing in you agree to our{" "}
+            <Link to="/terms" className="font-medium text-primary hover:underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link to="/privacy" className="font-medium text-primary hover:underline">
+              Privacy Policy
+            </Link>
+            .
+            <br />
+            🔒 Uploaded statements are processed securely and permanently deleted after analysis.
           </p>
         </div>
 
