@@ -44,6 +44,7 @@ export type SavedScenario = {
     closureMonthsFromNow: number;
     timeSavedMonths: number;
   };
+  safetyAllocation?: number;
   outputs: {
     monthlyIncome: number;
     monthlyExpenses: number;
