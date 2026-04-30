@@ -132,6 +132,10 @@ function buildUserPrompt(profile: z.infer<typeof profileSchema>) {
 - New home EMI: ₹${Math.round(profile.newEMI)}
 - Monthly surplus after all: ₹${Math.round(profile.surplus)}
 - Current monthly investments: ₹${Math.round(profile.investments)}
+- Target corpus: ₹${Math.round(profile.targetCorpus)}
+- Projected corpus at current pace: ₹${Math.round(profile.projectedCorpus)}
+- Corpus gap: ₹${Math.round(profile.corpusGap)}
+- Months to possession or purchase: ${Math.round(profile.monthsToPurchase)}
 - Emergency fund mode: ${profile.emergencyFundMode}
 - Emergency fund target: ₹${Math.round(profile.emergencyFundTarget)}
 - Property cost: ₹${Math.round(profile.propertyCost)}
