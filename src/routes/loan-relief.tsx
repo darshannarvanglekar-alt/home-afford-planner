@@ -860,3 +860,150 @@ function ComparisonPanel({
     </div>
   );
 }
+
+function OneTimeBlock(props: {
+  oneTimeAmount: number;
+  setOneTimeAmount: (n: number) => void;
+  oneTimeAtMonth: number;
+  setOneTimeAtMonth: (n: number) => void;
+  oneTimeMode: PrepayMode;
+  setOneTimeMode: (m: PrepayMode) => void;
+  totalMonths: number;
+  startYear: number;
+  startMonth: number;
+}) {
+  const {
+    oneTimeAmount,
+    setOneTimeAmount,
+    oneTimeAtMonth,
+    setOneTimeAtMonth,
+    oneTimeMode,
+    setOneTimeMode,
+    totalMonths,
+    startYear,
+    startMonth,
+  } = props;
+  const monthDate = new Date(startYear, startMonth - 1 + (oneTimeAtMonth - 1), 1);
+  return (
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <Label>Prepayment amount</Label>
+        <CurrencyInput value={oneTimeAmount} onValueChange={setOneTimeAmount} placeholder="0" />
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>At which month do you plan to prepay?</Label>
+          <span className="text-sm font-medium text-foreground">
+            Month {oneTimeAtMonth} —{" "}
+            {monthDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
+          </span>
+        </div>
+        <Slider
+          min={1}
+          max={totalMonths}
+          step={1}
+          value={[oneTimeAtMonth]}
+          onValueChange={(v) => setOneTimeAtMonth(v[0] ?? oneTimeAtMonth)}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>After prepayment, what do you prefer?</Label>
+        <RadioGroup
+          value={oneTimeMode}
+          onValueChange={(v) => setOneTimeMode(v as PrepayMode)}
+          className="gap-3"
+        >
+          <div className="flex items-start gap-2">
+            <RadioGroupItem value="reduce_emi" id="reduce" className="mt-1" />
+            <Label htmlFor="reduce" className="text-sm font-normal">
+              Reduce my EMI (keep same tenure, lower monthly payment)
+            </Label>
+          </div>
+          <div className="flex items-start gap-2">
+            <RadioGroupItem value="shorten_tenure" id="shorten" className="mt-1" />
+            <Label htmlFor="shorten" className="text-sm font-normal">
+              Close loan faster (keep same EMI, shorter tenure)
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+    </div>
+  );
+}
+
+function RecurringBlock(props: {
+  extraMonthly: number;
+  setExtraMonthly: (n: number) => void;
+  extraStartMonth: number;
+  setExtraStartMonth: (n: number) => void;
+  stepUpEnabled: boolean;
+  setStepUpEnabled: (b: boolean) => void;
+  stepUpPct: number;
+  setStepUpPct: (n: number) => void;
+  totalMonths: number;
+  startYear: number;
+  startMonth: number;
+}) {
+  const {
+    extraMonthly,
+    setExtraMonthly,
+    extraStartMonth,
+    setExtraStartMonth,
+    stepUpEnabled,
+    setStepUpEnabled,
+    stepUpPct,
+    setStepUpPct,
+    totalMonths,
+    startYear,
+    startMonth,
+  } = props;
+  const monthDate = new Date(startYear, startMonth - 1 + (extraStartMonth - 1), 1);
+  return (
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <Label>Extra amount per month above regular EMI</Label>
+        <CurrencyInput value={extraMonthly} onValueChange={setExtraMonthly} placeholder="0" />
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>Starting from which month?</Label>
+          <span className="text-sm font-medium text-foreground">
+            Month {extraStartMonth} —{" "}
+            {monthDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
+          </span>
+        </div>
+        <Slider
+          min={1}
+          max={totalMonths}
+          step={1}
+          value={[extraStartMonth]}
+          onValueChange={(v) => setExtraStartMonth(v[0] ?? extraStartMonth)}
+        />
+      </div>
+      <div className="flex items-center justify-between rounded-lg border border-border p-3">
+        <div>
+          <Label htmlFor="stepup" className="text-sm">
+            Annual step-up on extra payment
+          </Label>
+          <p className="text-xs text-muted-foreground">Increase extra payment every year</p>
+        </div>
+        <Switch id="stepup" checked={stepUpEnabled} onCheckedChange={setStepUpEnabled} />
+      </div>
+      {stepUpEnabled && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Increase extra payment by</Label>
+            <span className="text-sm font-medium text-foreground">{stepUpPct}% / year</span>
+          </div>
+          <Slider
+            min={5}
+            max={20}
+            step={1}
+            value={[stepUpPct]}
+            onValueChange={(v) => setStepUpPct(v[0] ?? stepUpPct)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
