@@ -23,6 +23,9 @@ const profileSchema = z.object({
   newEMI: z.number(),
   surplus: z.number(),
   investments: z.number(),
+  existingInvestmentCorpusToday: z.number().optional(),
+  existingInvestmentProjectedCorpus: z.number().optional(),
+  existingInvestmentCoveragePct: z.number().optional(),
   targetCorpus: z.number(),
   projectedCorpus: z.number(),
   corpusGap: z.number(),
@@ -82,9 +85,8 @@ Generate suggestions covering these areas where relevant:
 2. Annual step-up contribution: if corpus gap exists, model a 10% yearly increase using monthlyInvestment as the updated first amount.
 3. Extend timeline before purchase: if corpus is significantly short and timeline is under 24 months.
 4. Add safety buffer first: if safety buffer is not protected and surplus allows a small monthly set-aside.
-5. Partial prepayment at possession: if projected corpus exceeds target meaningfully.
-6. Split corpus between prepayment and monthly withdrawal: only if corpus surplus is large enough; avoid naming any product or provider.
-7. Reduce loan amount by increasing down payment: if projected corpus exceeds target.
+5. Existing corpus coverage: if existing investments cover a meaningful portion, acknowledge the coverage percentage and suggest only the additional monthly amount needed to close the remaining gap.
+6. Reduce loan amount by increasing down payment: if projected corpus exceeds target.
 
 For simulation, include only fields that should change in the simulator. Use the user's current values as a base.`;
 
@@ -131,7 +133,10 @@ function buildUserPrompt(profile: z.infer<typeof profileSchema>) {
 - Existing EMIs: ₹${Math.round(profile.existingEMIs)}
 - New home EMI: ₹${Math.round(profile.newEMI)}
 - Monthly surplus after all: ₹${Math.round(profile.surplus)}
-- Current monthly investments: ₹${Math.round(profile.investments)}
+- Current monthly investment commitment: ₹${Math.round(profile.investments)}
+- Existing investment corpus today: ₹${Math.round(profile.existingInvestmentCorpusToday ?? 0)}
+- Existing investments projected corpus by possession/purchase: ₹${Math.round(profile.existingInvestmentProjectedCorpus ?? profile.projectedCorpus)}
+- Existing investments coverage of target: ${Math.round(profile.existingInvestmentCoveragePct ?? 0)}%
 - Target corpus: ₹${Math.round(profile.targetCorpus)}
 - Projected corpus at current pace: ₹${Math.round(profile.projectedCorpus)}
 - Corpus gap: ₹${Math.round(profile.corpusGap)}
