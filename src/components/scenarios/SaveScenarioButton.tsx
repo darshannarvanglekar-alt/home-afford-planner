@@ -97,6 +97,7 @@ export function SaveScenarioButton({
       profile,
       corpus,
       loanRelief,
+      safetyAllocation,
     });
     const res = addScenario(user?.id, snap);
     if (!res.ok) {
@@ -120,6 +121,7 @@ export function SaveScenarioButton({
       profile,
       corpus,
       loanRelief,
+      safetyAllocation,
     });
     updateScenario(user?.id, snap);
     toast.success(`Updated "${snap.name}"`);
