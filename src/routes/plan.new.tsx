@@ -243,30 +243,34 @@ function PlanWizardPage() {
       const parsedProfile = profileSchema.safeParse(profile);
 
       if (!parsedFinances.success) {
+        const message = formatValidationIssue("Your Finances", parsedFinances.error);
         console.error("Calculate My Plan blocked by finances validation", parsedFinances.error.flatten());
-        setValidationError("Please review the Your Finances fields before calculating your plan.");
-        toast.error("Please review the Your Finances fields before calculating your plan");
+        setValidationError(message);
+        toast.error(message);
         return;
       }
       if (!parsedInvestments.success) {
+        const message = formatValidationIssue("My Current Investments", parsedInvestments.error);
         console.error(
           "Calculate My Plan blocked by current investments validation",
           parsedInvestments.error.flatten(),
         );
-        setValidationError("Please review the My Current Investments fields before calculating your plan.");
-        toast.error("Please review the My Current Investments fields before calculating your plan");
+        setValidationError(message);
+        toast.error(message);
         return;
       }
       if (!parsedHome.success) {
+        const message = formatValidationIssue("Your Home", parsedHome.error);
         console.error("Calculate My Plan blocked by home validation", parsedHome.error.flatten());
-        setValidationError("Please review the Your Home fields before calculating your plan.");
-        toast.error("Please review the Your Home fields before calculating your plan");
+        setValidationError(message);
+        toast.error(message);
         return;
       }
       if (!parsedProfile.success) {
+        const message = formatValidationIssue("Your Profile", parsedProfile.error);
         console.error("Calculate My Plan blocked by profile validation", parsedProfile.error.flatten());
-        setValidationError("Please review the Your Profile fields before calculating your plan.");
-        toast.error("Please review the Your Profile fields before calculating your plan");
+        setValidationError(message);
+        toast.error(message);
         return;
       }
 
