@@ -241,123 +241,18 @@ export function Step2Home({ value, onChange, canUseProFeatures = true, onUpgrade
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="downPayment">Your Own Contribution / Down Payment</Label>
-            <CurrencyInput
-              id="downPayment"
-              value={value.downPayment}
-              onValueChange={(n) => set("downPayment", n)}
-              placeholder="0"
-            />
-            <p className="text-xs text-muted-foreground">
-              Amount you will pay from your savings
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-xl bg-primary/10 px-4 py-3">
-          <div className="text-xs font-medium uppercase tracking-wide text-primary/80">
-            Loan Amount
-          </div>
-          <div className="mt-0.5 text-xl font-bold text-primary">
-            {formatINR(loan)}
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="city">City / Location</Label>
-          <Input
-            id="city"
-            value={value.city}
-            onChange={(e) => set("city", e.target.value)}
-            placeholder="e.g., Bengaluru"
-          />
-        </div>
-      </section>
-
-      {/* Loan details */}
-      <section className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
-        <h2 className="text-base font-semibold text-foreground">Loan Details</h2>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="rateA">Expected interest rate (%)</Label>
+            <Label htmlFor="city">City / Location</Label>
             <Input
-              id="rateA"
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min={0}
-              max={50}
-              value={Number.isFinite(value.interestRateA) ? value.interestRateA : ""}
-              onChange={(e) => {
-                const n = Number.parseFloat(e.target.value);
-                set("interestRateA", Number.isFinite(n) ? n : 0);
-              }}
-              placeholder="8.5"
+              id="city"
+              value={value.city}
+              onChange={(e) => set("city", e.target.value)}
+              placeholder="e.g., Bengaluru"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="rateB">Compare with alternate rate (%) — optional</Label>
-            <Input
-              id="rateB"
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min={0}
-              max={50}
-              value={value.interestRateB ?? ""}
-              onChange={(e) => {
-                const raw = e.target.value;
-                if (raw === "") {
-                  set("interestRateB", undefined);
-                  return;
-                }
-                const n = Number.parseFloat(raw);
-                set("interestRateB", Number.isFinite(n) ? n : undefined);
-              }}
-              placeholder="e.g., 9.0"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="tenure">Loan Tenure (Years)</Label>
-            <Select
-              value={String(value.tenureYears)}
-              onValueChange={(v) => set("tenureYears", Number.parseInt(v, 10))}
-            >
-              <SelectTrigger id="tenure">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TENURE_OPTIONS.map((y) => (
-                  <SelectItem key={y} value={String(y)}>
-                    {y} years
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="rounded-xl bg-primary/10 px-4 py-3">
-            <div className="text-xs font-medium uppercase tracking-wide text-primary/80">
-              Monthly EMI @ Rate A
-            </div>
-            <div className="mt-0.5 text-xl font-bold text-primary">
-              {formatINR(emiA)}
-            </div>
-          </div>
-          {emiB !== null && (
-            <div className="rounded-xl bg-accent/40 px-4 py-3">
-              <div className="text-xs font-medium uppercase tracking-wide text-foreground/70">
-                Monthly EMI @ Rate B
-              </div>
-              <div className="mt-0.5 text-xl font-bold text-foreground">
-                {formatINR(emiB)}
-              </div>
-            </div>
-          )}
-        </div>
+        <p className="text-xs text-muted-foreground">
+          You'll set down payment, interest rate, and tenure in the next step.
+        </p>
       </section>
 
       {/* Conditional: under construction */}
