@@ -262,7 +262,7 @@ function PlanWizardPage() {
           ) : step === 3 ? (
             <Step3Profile value={profile} onChange={setProfile} />
           ) : step === 4 ? (
-            <Step4Plan finances={finances} home={home} profile={profile} planName={planName} onPlanNameChange={(name) => void updatePlanName(name)} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
+            <Step4Plan finances={finances} home={home} profile={profile} onFinancesChange={setFinances} onHomeChange={setHome} onProfileChange={setProfile} planName={planName} onPlanNameChange={(name) => void updatePlanName(name)} canUseProFeatures={canUseProFeatures} onUpgradeRequired={requestUpgrade} />
           ) : (
             <ComingSoon step={step} />
           )}
