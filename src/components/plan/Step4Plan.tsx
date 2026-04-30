@@ -617,10 +617,14 @@ type CorpusRoute =
   | "lumpSum"
   | "pooledSaving"
   | "gold"
-  | "recurringDeposit";
+  | "recurringDeposit"
+  | "blended";
 
 const DISCLAIMER =
   "HomeAfford is a scenario planning tool. All projections are illustrative and not financial, investment, or loan advice.";
+
+// Routes whose return rate is driven by the 8/10/12 chips
+const MARKET_LINKED_ROUTES: CorpusRoute[] = ["monthlyInvestment", "lumpSum", "gold", "blended"];
 
 const routeCards: Array<{
   id: CorpusRoute;
@@ -682,6 +686,16 @@ const routeCards: Array<{
     description: "A monthly recurring deposit route using your assumed return.",
     icon: Layers3,
     defaultRate: 7,
+    monthly: true,
+    stepEnabled: false,
+  },
+  {
+    id: "blended",
+    title: "Blended Approach",
+    description:
+      "Split your monthly surplus across two or more routes for a balance of growth and safety.",
+    icon: Split,
+    defaultRate: 9,
     monthly: true,
     stepEnabled: false,
   },
