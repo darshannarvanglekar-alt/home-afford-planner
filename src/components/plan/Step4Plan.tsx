@@ -19,7 +19,6 @@ import {
   type Home,
   loanAmount,
   type Profile,
-  totalCommitments,
   summarizeInvestments,
   totalExpenses,
 } from "@/lib/plan-schema";
