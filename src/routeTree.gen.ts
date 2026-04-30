@@ -20,6 +20,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlanNewRouteImport } from './routes/plan.new'
 import { Route as ApiGeneratePlanSuggestionsRouteImport } from './routes/api.generate-plan-suggestions'
+import { Route as ApiGenerateLoanReliefNudgeRouteImport } from './routes/api.generate-loan-relief-nudge'
 import { Route as ApiGenerateComparisonSummaryRouteImport } from './routes/api.generate-comparison-summary'
 import { Route as ApiExtractBuilderPaymentPlanRouteImport } from './routes/api.extract-builder-payment-plan'
 import { Route as ApiCreateRazorpaySubscriptionRouteImport } from './routes/api.create-razorpay-subscription'
@@ -82,6 +83,12 @@ const ApiGeneratePlanSuggestionsRoute =
     path: '/api/generate-plan-suggestions',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiGenerateLoanReliefNudgeRoute =
+  ApiGenerateLoanReliefNudgeRouteImport.update({
+    id: '/api/generate-loan-relief-nudge',
+    path: '/api/generate-loan-relief-nudge',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiGenerateComparisonSummaryRoute =
   ApiGenerateComparisonSummaryRouteImport.update({
     id: '/api/generate-comparison-summary',
@@ -127,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/api/create-razorpay-subscription': typeof ApiCreateRazorpaySubscriptionRoute
   '/api/extract-builder-payment-plan': typeof ApiExtractBuilderPaymentPlanRoute
   '/api/generate-comparison-summary': typeof ApiGenerateComparisonSummaryRoute
+  '/api/generate-loan-relief-nudge': typeof ApiGenerateLoanReliefNudgeRoute
   '/api/generate-plan-suggestions': typeof ApiGeneratePlanSuggestionsRoute
   '/plan/new': typeof PlanNewRoute
 }
@@ -145,6 +153,7 @@ export interface FileRoutesByTo {
   '/api/create-razorpay-subscription': typeof ApiCreateRazorpaySubscriptionRoute
   '/api/extract-builder-payment-plan': typeof ApiExtractBuilderPaymentPlanRoute
   '/api/generate-comparison-summary': typeof ApiGenerateComparisonSummaryRoute
+  '/api/generate-loan-relief-nudge': typeof ApiGenerateLoanReliefNudgeRoute
   '/api/generate-plan-suggestions': typeof ApiGeneratePlanSuggestionsRoute
   '/plan/new': typeof PlanNewRoute
 }
@@ -164,6 +173,7 @@ export interface FileRoutesById {
   '/api/create-razorpay-subscription': typeof ApiCreateRazorpaySubscriptionRoute
   '/api/extract-builder-payment-plan': typeof ApiExtractBuilderPaymentPlanRoute
   '/api/generate-comparison-summary': typeof ApiGenerateComparisonSummaryRoute
+  '/api/generate-loan-relief-nudge': typeof ApiGenerateLoanReliefNudgeRoute
   '/api/generate-plan-suggestions': typeof ApiGeneratePlanSuggestionsRoute
   '/plan/new': typeof PlanNewRoute
 }
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/api/create-razorpay-subscription'
     | '/api/extract-builder-payment-plan'
     | '/api/generate-comparison-summary'
+    | '/api/generate-loan-relief-nudge'
     | '/api/generate-plan-suggestions'
     | '/plan/new'
   fileRoutesByTo: FileRoutesByTo
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/api/create-razorpay-subscription'
     | '/api/extract-builder-payment-plan'
     | '/api/generate-comparison-summary'
+    | '/api/generate-loan-relief-nudge'
     | '/api/generate-plan-suggestions'
     | '/plan/new'
   id:
@@ -220,6 +232,7 @@ export interface FileRouteTypes {
     | '/api/create-razorpay-subscription'
     | '/api/extract-builder-payment-plan'
     | '/api/generate-comparison-summary'
+    | '/api/generate-loan-relief-nudge'
     | '/api/generate-plan-suggestions'
     | '/plan/new'
   fileRoutesById: FileRoutesById
@@ -239,6 +252,7 @@ export interface RootRouteChildren {
   ApiCreateRazorpaySubscriptionRoute: typeof ApiCreateRazorpaySubscriptionRoute
   ApiExtractBuilderPaymentPlanRoute: typeof ApiExtractBuilderPaymentPlanRoute
   ApiGenerateComparisonSummaryRoute: typeof ApiGenerateComparisonSummaryRoute
+  ApiGenerateLoanReliefNudgeRoute: typeof ApiGenerateLoanReliefNudgeRoute
   ApiGeneratePlanSuggestionsRoute: typeof ApiGeneratePlanSuggestionsRoute
   PlanNewRoute: typeof PlanNewRoute
 }
@@ -322,6 +336,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGeneratePlanSuggestionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/generate-loan-relief-nudge': {
+      id: '/api/generate-loan-relief-nudge'
+      path: '/api/generate-loan-relief-nudge'
+      fullPath: '/api/generate-loan-relief-nudge'
+      preLoaderRoute: typeof ApiGenerateLoanReliefNudgeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/generate-comparison-summary': {
       id: '/api/generate-comparison-summary'
       path: '/api/generate-comparison-summary'
@@ -375,6 +396,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCreateRazorpaySubscriptionRoute: ApiCreateRazorpaySubscriptionRoute,
   ApiExtractBuilderPaymentPlanRoute: ApiExtractBuilderPaymentPlanRoute,
   ApiGenerateComparisonSummaryRoute: ApiGenerateComparisonSummaryRoute,
+  ApiGenerateLoanReliefNudgeRoute: ApiGenerateLoanReliefNudgeRoute,
   ApiGeneratePlanSuggestionsRoute: ApiGeneratePlanSuggestionsRoute,
   PlanNewRoute: PlanNewRoute,
 }
