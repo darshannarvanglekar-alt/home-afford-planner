@@ -44,6 +44,7 @@ export type SavedScenario = {
     closureMonthsFromNow: number;
     timeSavedMonths: number;
   };
+  safetyAllocation?: number;
   outputs: {
     monthlyIncome: number;
     monthlyExpenses: number;
@@ -109,6 +110,7 @@ export function buildSnapshot(args: {
   profile: Profile;
   corpus?: SavedScenario["corpus"];
   loanRelief?: SavedScenario["loanRelief"];
+  safetyAllocation?: number;
   preferred?: boolean;
   id?: string;
 }): SavedScenario {
@@ -130,6 +132,7 @@ export function buildSnapshot(args: {
     inputs: { finances, investments, home, profile },
     corpus: args.corpus,
     loanRelief: args.loanRelief,
+    safetyAllocation: args.safetyAllocation,
     outputs: {
       monthlyIncome: totalIncome(finances),
       monthlyExpenses: totalExpenses(finances),

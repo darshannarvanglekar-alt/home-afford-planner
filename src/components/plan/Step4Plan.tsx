@@ -13,6 +13,8 @@ import {
   RefreshCw,
   Shield,
   ShieldCheck,
+  Split,
+  Trophy,
   TrendingUp,
   TriangleAlert,
   WalletCards,
@@ -81,7 +83,21 @@ export function Step4Plan({
   const [open, setOpen] = React.useState(true);
   const [editingName, setEditingName] = React.useState(false);
   const [draftName, setDraftName] = React.useState(planName);
-  const [safetyAllocation, setSafetyAllocation] = React.useState(0);
+  const safetyKey = `homeafford.safetyAllocation.${planName || "default"}`;
+  const [safetyAllocation, setSafetyAllocation] = React.useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    const raw = window.localStorage.getItem(safetyKey);
+    const n = raw ? Number(raw) : 0;
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  });
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (safetyAllocation > 0) {
+      window.localStorage.setItem(safetyKey, String(safetyAllocation));
+    } else {
+      window.localStorage.removeItem(safetyKey);
+    }
+  }, [safetyAllocation, safetyKey]);
   const plan = React.useMemo(
     () => calculateAffordabilityPlan(finances, home, profile),
     [finances, home, profile],
@@ -172,6 +188,7 @@ export function Step4Plan({
             investments={investments}
             home={home}
             profile={profile}
+            safetyAllocation={safetyAllocation}
             defaultName={planName}
             variant="outline"
             className="min-h-11"
@@ -251,7 +268,10 @@ export function Step4Plan({
         finances={finances}
         investments={investments}
         home={home}
+        profile={profile}
+        planName={planName}
         planSurplus={plan.surplusAfterEmi}
+        safetyAllocation={safetyAllocation}
         onSafetyAllocation={setSafetyAllocation}
       />
 
@@ -547,9 +567,15 @@ function SmartSuggestionsPanel({
             </Button>
           </div>
         ) : suggestions.length === 0 ? (
-          <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">
-            Your plan is already well-optimised. Small tweaks are shown below in case you want to
-            explore further.
+          <div className="rounded-xl border border-success/25 bg-success-soft/55 p-5 text-center">
+            <Trophy className="mx-auto h-8 w-8 text-success" />
+            <h3 className="mt-2 text-base font-extrabold text-foreground">
+              Your plan looks well-optimised
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Based on your numbers, your current plan is already on a strong path. Here are a few
+              small tweaks to explore if you want to go further.
+            </p>
           </div>
         ) : (
           suggestions.map((suggestion, index) => (
@@ -600,10 +626,14 @@ type CorpusRoute =
   | "lumpSum"
   | "pooledSaving"
   | "gold"
-  | "recurringDeposit";
+  | "recurringDeposit"
+  | "blended";
 
 const DISCLAIMER =
   "HomeAfford is a scenario planning tool. All projections are illustrative and not financial, investment, or loan advice.";
+
+// Routes whose return rate is driven by the 8/10/12 chips
+const MARKET_LINKED_ROUTES: CorpusRoute[] = ["monthlyInvestment", "lumpSum", "gold", "blended"];
 
 const routeCards: Array<{
   id: CorpusRoute;
@@ -668,6 +698,16 @@ const routeCards: Array<{
     monthly: true,
     stepEnabled: false,
   },
+  {
+    id: "blended",
+    title: "Blended Approach",
+    description:
+      "Split your monthly surplus across two or more routes for a balance of growth and safety.",
+    icon: Split,
+    defaultRate: 9,
+    monthly: true,
+    stepEnabled: false,
+  },
 ];
 
 type RouteAllocation = { id: CorpusRoute; amount: number; rate: number; stepUp: boolean };
@@ -676,13 +716,19 @@ function CorpusBuilder({
   finances,
   investments,
   home,
+  profile,
+  planName,
   planSurplus,
+  safetyAllocation,
   onSafetyAllocation,
 }: {
   finances: Finances;
   investments: CurrentInvestment[];
   home: Home;
+  profile: Profile;
+  planName?: string;
   planSurplus: number;
+  safetyAllocation: number;
   onSafetyAllocation: (amount: number) => void;
 }) {
   const targetDefault = Math.max(
@@ -737,9 +783,17 @@ function CorpusBuilder({
 
   const updateMarketRates = (rate: number) => {
     setAllocations(
-      allocations.map((item) => (item.id === "monthlyInvestment" ? { ...item, rate } : item)),
+      allocations.map((item) =>
+        MARKET_LINKED_ROUTES.includes(item.id) ? { ...item, rate } : item,
+      ),
     );
   };
+
+  const hasBlended = selected.has("blended");
+  const blendedAlone = hasBlended && allocations.length === 1;
+  const hasMultipleRoutes = allocations.length > 1;
+  const marketRateChip =
+    allocations.find((item) => MARKET_LINKED_ROUTES.includes(item.id))?.rate ?? 10;
 
   return (
     <>
@@ -801,6 +855,17 @@ function CorpusBuilder({
           </div>
         </div>
 
+        {blendedAlone && (
+          <div className="mt-4 rounded-2xl border border-warning/25 bg-warning-soft p-4 text-sm font-medium text-warning-soft-foreground">
+            Blended Approach combines two or more routes. Please select at least one additional route card to combine with it.
+          </div>
+        )}
+        {hasBlended && hasMultipleRoutes && (
+          <div className="mt-4 rounded-2xl border border-primary/20 bg-primary-soft p-4 text-sm font-medium text-primary-soft-foreground">
+            You've selected multiple routes — this is your blended approach. Adjust amounts for each route below.
+          </div>
+        )}
+
         <div className="sticky top-24 z-10 mt-6 rounded-2xl border border-border bg-background/95 p-4 shadow-soft backdrop-blur">
           <div className="flex flex-col gap-1 text-sm font-semibold sm:flex-row sm:items-center sm:justify-between">
             <span>Total monthly allocation: {formatINR(totalMonthly)}</span>
@@ -825,7 +890,7 @@ function CorpusBuilder({
           </div>
           <ScenarioChips
             rates={[8, 10, 12]}
-            selected={allocations.find((item) => item.id === "monthlyInvestment")?.rate ?? 10}
+            selected={marketRateChip}
             onSelect={updateMarketRates}
           />
           <div className="space-y-3">
@@ -910,6 +975,27 @@ function CorpusBuilder({
           entered.
         </p>
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{DISCLAIMER}</p>
+
+        <div className="mt-6 flex justify-end">
+          <SaveScenarioButton
+            finances={finances}
+            investments={investments}
+            home={home}
+            profile={profile}
+            safetyAllocation={safetyAllocation}
+            corpus={{
+              monthlyInvestment: totalMonthly,
+              assumedReturnPct: marketRateChip,
+              stepUp: allocations.some((a) => a.stepUp),
+              projected: result.final,
+              target,
+            }}
+            defaultName={planName}
+            variant="default"
+            className="min-h-11"
+            label="Save This Scenario"
+          />
+        </div>
       </section>
 
       <SafetyBufferPlanner

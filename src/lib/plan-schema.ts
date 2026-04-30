@@ -74,14 +74,38 @@ export const financesSchema = z.object({
     emis: num,
     insurance: num,
   }),
-  expenses: z.object({
-    housing: num,
-    family: num,
-    health: num,
-    daily: num,
-    investments: num,
-    discretionary: num,
-  }),
+  expenses: z
+    .object({
+      housing: num,
+      family: num,
+      health: num,
+      daily: num,
+      schoolFees: num,
+      discretionary: num,
+      // Backward compat: accept legacy "investments" key from saved plans
+      investments: num.optional(),
+    })
+    .transform((v) => {
+      const { investments, ...rest } = v;
+      if ((rest.schoolFees ?? 0) === 0 && typeof investments === "number" && investments > 0) {
+        return { ...rest, schoolFees: investments } as {
+          housing: number;
+          family: number;
+          health: number;
+          daily: number;
+          schoolFees: number;
+          discretionary: number;
+        };
+      }
+      return rest as {
+        housing: number;
+        family: number;
+        health: number;
+        daily: number;
+        schoolFees: number;
+        discretionary: number;
+      };
+    }),
 });
 
 export type Finances = z.infer<typeof financesSchema>;
@@ -94,7 +118,7 @@ export const defaultFinances: Finances = {
     family: 0,
     health: 0,
     daily: 0,
-    investments: 0,
+    schoolFees: 0,
     discretionary: 0,
   },
 };

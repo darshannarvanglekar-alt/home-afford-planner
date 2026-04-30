@@ -5,8 +5,9 @@ const STEPS = [
   { n: 1, label: "Your Finances" },
   { n: 2, label: "Investments" },
   { n: 3, label: "Your Home" },
-  { n: 4, label: "Your Profile" },
-  { n: 5, label: "Your Plan" },
+  { n: 4, label: "Your Loan" },
+  { n: 5, label: "Your Profile" },
+  { n: 6, label: "Your Plan" },
 ];
 
 export function WizardProgress({ current }: { current: number }) {

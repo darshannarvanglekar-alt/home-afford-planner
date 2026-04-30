@@ -381,7 +381,7 @@ function ComparisonPanel({
       rows: [
         rowINR(
           "Monthly investment (total)",
-          scenarios.map((s) => s.corpus?.monthlyInvestment ?? s.inputs.finances.expenses.investments ?? 0),
+          scenarios.map((s) => s.corpus?.monthlyInvestment ?? 0),
           "high",
         ),
         rowText(

@@ -9,6 +9,7 @@ import { WizardProgress } from "@/components/plan/WizardProgress";
 import { Step1Finances } from "@/components/plan/Step1Finances";
 import { StepCurrentInvestments } from "@/components/plan/StepCurrentInvestments";
 import { Step2Home } from "@/components/plan/Step2Home";
+import { StepLoan } from "@/components/plan/StepLoan";
 import { Step3Profile } from "@/components/plan/Step3Profile";
 import { Step4Plan } from "@/components/plan/Step4Plan";
 import { Progress } from "@/components/ui/progress";
@@ -34,7 +35,7 @@ import { suggestPlanName } from "@/lib/plan-display";
 import { takePendingLoad } from "@/lib/scenarios";
 
 const searchSchema = z.object({
-  step: fallback(z.number().int().min(1).max(5), 1).default(1),
+  step: fallback(z.number().int().min(1).max(6), 1).default(1),
   planId: fallback(z.string().uuid().optional(), undefined),
 });
 
@@ -231,6 +232,8 @@ function PlanWizardPage() {
         setValidationError("Please enter the Property Cost to continue.");
         return (toast.error("Please enter the property cost to continue"), false);
       }
+    }
+    if (step === 4) {
       if (home.downPayment > home.propertyCost) {
         setValidationError("Down Payment cannot exceed Property Cost.");
         return (toast.error("Down payment cannot exceed property cost"), false);
@@ -291,7 +294,7 @@ function PlanWizardPage() {
       setCalculating(true);
       window.setTimeout(() => {
         setCalculating(false);
-        goToStep(5);
+        goToStep(6);
       }, 2300);
     } catch (error) {
       console.error("Calculate My Plan failed", error);
@@ -349,8 +352,10 @@ function PlanWizardPage() {
               onUpgradeRequired={requestUpgrade}
             />
           ) : step === 4 ? (
-            <Step3Profile value={profile} onChange={setProfile} />
+            <StepLoan value={home} onChange={setHome} />
           ) : step === 5 ? (
+            <Step3Profile value={profile} onChange={setProfile} />
+          ) : step === 6 ? (
             <Step4Plan
               finances={finances}
               investments={investments}
@@ -389,17 +394,17 @@ function PlanWizardPage() {
               )}
             </Button>
 
-            {step < 5 ? (
+            {step < 6 ? (
               <div className="flex flex-col items-stretch gap-2 sm:items-end">
                 {validationError ? (
                   <p className="text-sm font-medium text-destructive">{validationError}</p>
                 ) : null}
                 <Button
                   size="lg"
-                  className={step === 4 ? "h-12 px-8 text-base font-semibold" : undefined}
+                  className={step === 5 ? "h-12 px-8 text-base font-semibold" : undefined}
                   onClick={() => {
                     if (!validateStep()) return;
-                    if (step === 4) {
+                    if (step === 5) {
                       calculatePlan();
                     } else {
                       goToStep(step + 1);
@@ -411,8 +416,10 @@ function PlanWizardPage() {
                     : step === 2
                       ? "Next: Your Home"
                       : step === 3
-                        ? "Next: Your Profile"
-                        : "Calculate My Plan"}
+                        ? "Next: Your Loan"
+                        : step === 4
+                          ? "Next: Your Profile"
+                          : "Calculate My Plan"}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>

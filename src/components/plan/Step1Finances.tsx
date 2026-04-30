@@ -68,7 +68,7 @@ const EXPENSE_CARDS: Array<{
     helper: "fuel, commute, vehicle running costs",
   },
   {
-    key: "investments",
+    key: "schoolFees",
     emoji: "🎓",
     label: "School / education fees",
     helper: "school, education, classes, learning costs",
@@ -144,7 +144,7 @@ export function Step1Finances({
         family: Math.round(extracted.familyDependents),
         health: Math.round(extracted.healthProtection),
         daily: Math.round(extracted.dailyLiving),
-        investments: Math.round(extracted.investmentsSavings),
+        schoolFees: Math.round(extracted.investmentsSavings),
         discretionary: Math.round(extracted.discretionary),
       },
     });
