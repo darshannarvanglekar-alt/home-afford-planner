@@ -31,7 +31,11 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-10 border-t border-border pt-6 text-center text-xs text-muted-foreground">
-          © 2026 HomeAfford. Made in India 🇮🇳
+          <p>
+            HomeAfford is a scenario planning tool. All projections are illustrative and not
+            financial, investment, or loan advice.
+          </p>
+          <p className="mt-2">© 2026 HomeAfford. Made in India 🇮🇳</p>
         </div>
       </div>
     </footer>
