@@ -341,7 +341,11 @@ function PlanWizardPage() {
                   className={step === 4 ? "h-12 px-8 text-base font-semibold" : undefined}
                   onClick={() => {
                     if (!validateStep()) return;
-                    step === 4 ? calculatePlan() : goToStep(step + 1);
+                    if (step === 4) {
+                      calculatePlan();
+                    } else {
+                      goToStep(step + 1);
+                    }
                   }}
                 >
                   {step === 1
