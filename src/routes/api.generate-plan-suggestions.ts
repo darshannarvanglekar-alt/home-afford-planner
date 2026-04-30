@@ -70,7 +70,7 @@ Rules:
   {
     "icon": "single emoji",
     "title": "bold one-liner under 8 words",
-    "explanation": "2-3 sentences with actual ₹ amounts, specific and actionable",
+    "explanation": "maximum 2 sentences with actual ₹ amounts, specific and actionable",
     "impact": "short chip text like 8 months faster or Saves ₹4.2L interest",
     "simulation": { "monthlyInvestment": 18000, "downPayment": 1200000, "possessionMonth": 30, "emergencyFundPref": "conservative" },
     "type": "opportunity | warning | action"
