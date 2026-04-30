@@ -9,6 +9,7 @@ import { WizardProgress } from "@/components/plan/WizardProgress";
 import { Step1Finances } from "@/components/plan/Step1Finances";
 import { StepCurrentInvestments } from "@/components/plan/StepCurrentInvestments";
 import { Step2Home } from "@/components/plan/Step2Home";
+import { StepLoan } from "@/components/plan/StepLoan";
 import { Step3Profile } from "@/components/plan/Step3Profile";
 import { Step4Plan } from "@/components/plan/Step4Plan";
 import { Progress } from "@/components/ui/progress";
@@ -34,7 +35,7 @@ import { suggestPlanName } from "@/lib/plan-display";
 import { takePendingLoad } from "@/lib/scenarios";
 
 const searchSchema = z.object({
-  step: fallback(z.number().int().min(1).max(5), 1).default(1),
+  step: fallback(z.number().int().min(1).max(6), 1).default(1),
   planId: fallback(z.string().uuid().optional(), undefined),
 });
 
@@ -231,6 +232,8 @@ function PlanWizardPage() {
         setValidationError("Please enter the Property Cost to continue.");
         return (toast.error("Please enter the property cost to continue"), false);
       }
+    }
+    if (step === 4) {
       if (home.downPayment > home.propertyCost) {
         setValidationError("Down Payment cannot exceed Property Cost.");
         return (toast.error("Down payment cannot exceed property cost"), false);
