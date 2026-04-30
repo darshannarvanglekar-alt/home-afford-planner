@@ -969,6 +969,27 @@ function CorpusBuilder({
           entered.
         </p>
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{DISCLAIMER}</p>
+
+        <div className="mt-6 flex justify-end">
+          <SaveScenarioButton
+            finances={finances}
+            investments={investments}
+            home={home}
+            profile={profile}
+            safetyAllocation={safetyAllocation}
+            corpus={{
+              monthlyInvestment: totalMonthly,
+              assumedReturnPct: marketRateChip,
+              stepUp: allocations.some((a) => a.stepUp),
+              projected: result.final,
+              target,
+            }}
+            defaultName={planName}
+            variant="default"
+            className="min-h-11"
+            label="Save This Scenario"
+          />
+        </div>
       </section>
 
       <SafetyBufferPlanner
