@@ -193,13 +193,21 @@ interface SmartSuggestion {
   icon: string;
   title: string;
   explanation: string;
+  impact: string;
   type: SuggestionType;
+  simulation?: Partial<{
+    monthlyInvestment: number;
+    downPayment: number;
+    possessionMonth: number;
+    emergencyFundPref: Profile["emergencyFundPref"];
+  }>;
 }
 
-function SmartSuggestionsPanel({ finances, home, profile, canUseProFeatures = true, onUpgradeRequired }: Props) {
+function SmartSuggestionsPanel({ finances, home, profile, onFinancesChange, onHomeChange, onProfileChange, canUseProFeatures = true, onUpgradeRequired }: Props) {
   const [suggestions, setSuggestions] = React.useState<SmartSuggestion[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
+  const [originalValues, setOriginalValues] = React.useState<{ finances: Finances; home: Home; profile: Profile } | null>(null);
   const plan = calculateAffordabilityPlan(finances, home, profile);
 
   const generateSuggestions = React.useCallback(async () => {
@@ -212,6 +220,8 @@ function SmartSuggestionsPanel({ finances, home, profile, canUseProFeatures = tr
 
       const principal = loanAmount(home);
       const totalInterest = Math.max(0, calcEMI(principal, home.interestRateA, home.tenureYears) * home.tenureYears * 12 - principal);
+      const targetCorpus = Math.max(100000, home.downPayment + home.registrationStampDuty + home.interiorBudget);
+      const projectedCorpus = futureValueMonthly(finances.expenses.investments, 10, Math.max(1, home.possessionMonth), false, 0);
       const response = await fetch("/api/generate-plan-suggestions", {
         method: "POST",
         headers: {
@@ -226,6 +236,10 @@ function SmartSuggestionsPanel({ finances, home, profile, canUseProFeatures = tr
             newEMI: plan.newEmi,
             surplus: plan.surplusAfterEmi,
             investments: finances.expenses.investments,
+            targetCorpus,
+            projectedCorpus,
+            corpusGap: Math.max(0, targetCorpus - projectedCorpus),
+            monthsToPurchase: home.possessionMonth,
             emergencyFundMode: profile.emergencyFundPref,
             emergencyFundTarget: plan.emergencyFundNeeded,
             propertyCost: home.propertyCost,
@@ -248,7 +262,8 @@ function SmartSuggestionsPanel({ finances, home, profile, canUseProFeatures = tr
       if (!response.ok || !payload.suggestions?.length) throw new Error(payload.error ?? "We couldn't generate suggestions right now.");
       setSuggestions(payload.suggestions);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "We couldn't generate suggestions right now.");
+      console.error("AI scenario suggestions failed", err);
+      setError(err instanceof Error ? err.message : "Suggestions are taking longer than usual. Tap to retry.");
       setSuggestions([]);
     } finally {
       setLoading(false);
