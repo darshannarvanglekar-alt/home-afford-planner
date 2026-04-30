@@ -47,17 +47,21 @@ export const defaultHome: Home = {
 };
 
 export function loanAmount(h: Home): number {
-  return Math.max(0, (h.propertyCost || 0) - (h.downPayment || 0));
+  return Math.max(0, safeNumber(h.propertyCost) - safeNumber(h.downPayment));
 }
 
 export function calcEMI(principal: number, annualRatePct: number, tenureYears: number): number {
-  if (!principal || principal <= 0) return 0;
-  if (!tenureYears || tenureYears <= 0) return 0;
-  const n = tenureYears * 12;
-  const r = annualRatePct / 12 / 100;
-  if (r === 0) return principal / n;
+  const safePrincipal = safeNumber(principal);
+  const safeRate = safeNumber(annualRatePct);
+  const safeTenure = safeNumber(tenureYears);
+  if (!safePrincipal || safePrincipal <= 0) return 0;
+  if (!safeTenure || safeTenure <= 0) return 0;
+  const n = safeTenure * 12;
+  const r = safeRate / 12 / 100;
+  if (r === 0) return safePrincipal / n;
   const pow = Math.pow(1 + r, n);
-  return (principal * r * pow) / (pow - 1);
+  const emi = (safePrincipal * r * pow) / (pow - 1);
+  return Number.isFinite(emi) ? emi : 0;
 }
 
 export const financesSchema = z.object({
