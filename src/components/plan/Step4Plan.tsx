@@ -1328,3 +1328,27 @@ function MetricCard({
     </div>
   );
 }
+
+function SavedScenariosBanner() {
+  const { user } = useAuth();
+  const [count, setCount] = React.useState(0);
+  React.useEffect(() => {
+    const refresh = () => setCount(listScenarios(user?.id).length);
+    refresh();
+    window.addEventListener("homeafford:scenarios-changed", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("homeafford:scenarios-changed", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, [user?.id]);
+  if (count < 1) return null;
+  return (
+    <Link
+      to="/scenarios"
+      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/15"
+    >
+      You have {count} saved scenario{count === 1 ? "" : "s"}. Compare them →
+    </Link>
+  );
+}
