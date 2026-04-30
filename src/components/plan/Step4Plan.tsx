@@ -163,6 +163,18 @@ export function Step4Plan({
             Your current expenses exceed your income. Please review your numbers.
           </p>
         ) : null}
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <SaveScenarioButton
+            finances={finances}
+            investments={investments}
+            home={home}
+            profile={profile}
+            defaultName={planName}
+            variant="outline"
+            className="min-h-11"
+          />
+          <SavedScenariosBanner />
+        </div>
       </header>
 
       <section className={cn("rounded-2xl border p-5 shadow-soft sm:p-6", verdictTone.className)}>
