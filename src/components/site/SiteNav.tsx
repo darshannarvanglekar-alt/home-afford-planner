@@ -30,6 +30,7 @@ export function SiteNav() {
         <nav className="hidden items-center gap-3 md:flex">
           {session && <Button asChild variant="ghost"><Link to="/dashboard">Dashboard</Link></Button>}
           {session && <Button asChild variant="ghost"><Link to="/scenarios">My Scenarios</Link></Button>}
+          <Button asChild variant="ghost"><Link to="/loan-relief">Loan Relief</Link></Button>
           {session && <Button asChild variant="ghost"><Link to="/compare" search={{ planA: undefined }}>Compare</Link></Button>}
           <Button asChild variant="ghost"><Link to="/pricing">Pricing</Link></Button>
           {session && <Button asChild variant="ghost"><Link to="/settings">Settings</Link></Button>}
@@ -64,6 +65,7 @@ export function SiteNav() {
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-3 sm:px-6">
           {session && <Button asChild variant="ghost" className="w-full" onClick={() => setOpen(false)}><Link to="/dashboard">Dashboard</Link></Button>}
           {session && <Button asChild variant="ghost" className="w-full" onClick={() => setOpen(false)}><Link to="/scenarios">My Scenarios</Link></Button>}
+          <Button asChild variant="ghost" className="w-full" onClick={() => setOpen(false)}><Link to="/loan-relief">Loan Relief</Link></Button>
           {session && <Button asChild variant="ghost" className="w-full" onClick={() => setOpen(false)}><Link to="/compare" search={{ planA: undefined }}>Compare</Link></Button>}
           <Button asChild variant="ghost" className="w-full" onClick={() => setOpen(false)}><Link to="/pricing">Pricing</Link></Button>
           {session && <Button asChild variant="ghost" className="w-full" onClick={() => setOpen(false)}><Link to="/settings">Settings</Link></Button>}
