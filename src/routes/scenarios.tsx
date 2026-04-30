@@ -94,7 +94,7 @@ function ScenariosPage() {
     stagePendingLoad(target);
     toast.success(`Loading "${target.name}" into the simulator…`);
     setConfirmLoadId(null);
-    navigate({ to: "/plan/new", search: { step: 1 } });
+    navigate({ to: "/plan/new", search: { step: 1, planId: undefined } });
   };
 
   const performDelete = () => {
