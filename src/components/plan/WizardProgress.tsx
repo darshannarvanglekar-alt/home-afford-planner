@@ -3,9 +3,10 @@ import { cn } from "@/lib/utils";
 
 const STEPS = [
   { n: 1, label: "Your Finances" },
-  { n: 2, label: "Your Home" },
-  { n: 3, label: "Your Profile" },
-  { n: 4, label: "Your Plan" },
+  { n: 2, label: "Investments" },
+  { n: 3, label: "Your Home" },
+  { n: 4, label: "Your Profile" },
+  { n: 5, label: "Your Plan" },
 ];
 
 export function WizardProgress({ current }: { current: number }) {
