@@ -220,7 +220,7 @@ function EmptyState() {
           current numbers. You can save up to 10 and compare any 2 or 3 side by side.
         </p>
         <Button asChild className="mt-2">
-          <Link to="/plan/new" search={{ step: 1 }}>
+          <Link to="/plan/new" search={{ step: 1, planId: undefined }}>
             Open the simulator
           </Link>
         </Button>
