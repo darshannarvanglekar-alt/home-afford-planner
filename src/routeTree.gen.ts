@@ -14,6 +14,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ScenariosRouteImport } from './routes/scenarios'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as LoanReliefRouteImport } from './routes/loan-relief'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -50,6 +51,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoanReliefRoute = LoanReliefRouteImport.update({
+  id: '/loan-relief',
+  path: '/loan-relief',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/compare': typeof CompareRoute
   '/dashboard': typeof DashboardRoute
+  '/loan-relief': typeof LoanReliefRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/scenarios': typeof ScenariosRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/compare': typeof CompareRoute
   '/dashboard': typeof DashboardRoute
+  '/loan-relief': typeof LoanReliefRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/scenarios': typeof ScenariosRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/compare': typeof CompareRoute
   '/dashboard': typeof DashboardRoute
+  '/loan-relief': typeof LoanReliefRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/scenarios': typeof ScenariosRoute
@@ -184,6 +193,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/compare'
     | '/dashboard'
+    | '/loan-relief'
     | '/pricing'
     | '/privacy'
     | '/scenarios'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/compare'
     | '/dashboard'
+    | '/loan-relief'
     | '/pricing'
     | '/privacy'
     | '/scenarios'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/compare'
     | '/dashboard'
+    | '/loan-relief'
     | '/pricing'
     | '/privacy'
     | '/scenarios'
@@ -242,6 +254,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CompareRoute: typeof CompareRoute
   DashboardRoute: typeof DashboardRoute
+  LoanReliefRoute: typeof LoanReliefRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ScenariosRoute: typeof ScenariosRoute
@@ -292,6 +305,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/loan-relief': {
+      id: '/loan-relief'
+      path: '/loan-relief'
+      fullPath: '/loan-relief'
+      preLoaderRoute: typeof LoanReliefRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -386,6 +406,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CompareRoute: CompareRoute,
   DashboardRoute: DashboardRoute,
+  LoanReliefRoute: LoanReliefRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ScenariosRoute: ScenariosRoute,
