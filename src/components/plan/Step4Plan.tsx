@@ -13,6 +13,8 @@ import {
   RefreshCw,
   Shield,
   ShieldCheck,
+  Split,
+  Trophy,
   TrendingUp,
   TriangleAlert,
   WalletCards,
