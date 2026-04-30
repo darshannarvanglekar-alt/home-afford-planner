@@ -108,8 +108,7 @@ export function totalIncome(f: Finances): number {
 }
 
 export function totalCommitments(f: Finances): number {
-  const c = f.commitments;
-  return (c.emis || 0) + (c.insurance || 0);
+  return f.commitments.emis || 0;
 }
 
 export function totalExpenses(f: Finances): number {
@@ -119,7 +118,6 @@ export function totalExpenses(f: Finances): number {
     (e.family || 0) +
     (e.health || 0) +
     (e.daily || 0) +
-    (e.investments || 0) +
     (e.discretionary || 0)
   );
 }
@@ -130,6 +128,91 @@ export function totalOutflow(f: Finances): number {
 
 export function surplus(f: Finances): number {
   return totalIncome(f) - totalOutflow(f);
+}
+
+export const INVESTMENT_TYPES = [
+  "monthly_market",
+  "monthly_fixed",
+  "recurring_deposit",
+  "fixed_deposit",
+  "pooled_saving",
+  "gold_accumulation",
+  "protection_plan",
+  "ppf_style",
+  "other",
+] as const;
+export type InvestmentType = (typeof INVESTMENT_TYPES)[number];
+
+export const investmentTypeLabels: Record<InvestmentType, string> = {
+  monthly_market: "Monthly investment (market-linked)",
+  monthly_fixed: "Monthly fixed return saving",
+  recurring_deposit: "Recurring deposit",
+  fixed_deposit: "Fixed deposit (lump sum)",
+  pooled_saving: "Chit-style pooled saving",
+  gold_accumulation: "Gold accumulation",
+  protection_plan: "Insurance / protection plan",
+  ppf_style: "Public provident fund-style saving",
+  other: "Other investment",
+};
+
+export const investmentDefaultRates: Record<InvestmentType, number> = {
+  monthly_market: 10,
+  monthly_fixed: 7,
+  recurring_deposit: 7,
+  fixed_deposit: 7,
+  pooled_saving: 9,
+  gold_accumulation: 8,
+  protection_plan: 5,
+  ppf_style: 7.1,
+  other: 8,
+};
+
+export const investmentSchema = z.object({
+  id: z.string(),
+  type: z.enum(INVESTMENT_TYPES).default("monthly_market"),
+  amount: num,
+  assumedReturn: z.number().min(0).max(30).default(10),
+  monthsRunning: z.number().int().min(0).max(600).default(0),
+  continuing: z.boolean().default(true),
+  monthsRemaining: z.number().int().min(0).max(600).default(12),
+});
+export type CurrentInvestment = z.infer<typeof investmentSchema>;
+export const investmentsSchema = z.array(investmentSchema).max(10).default([]);
+
+export function isLumpSumInvestment(type: InvestmentType): boolean {
+  return type === "fixed_deposit";
+}
+
+export function estimateInvestmentCurrentValue(investment: CurrentInvestment): number {
+  if (isLumpSumInvestment(investment.type)) return futureValueAmount(investment.amount, investment.assumedReturn, investment.monthsRunning);
+  return futureValueSeries(investment.amount, investment.assumedReturn, investment.monthsRunning);
+}
+
+export function projectInvestmentValue(investment: CurrentInvestment, monthsToTarget: number): number {
+  const current = estimateInvestmentCurrentValue(investment);
+  const months = Math.max(0, Math.round(monthsToTarget));
+  const carried = futureValueAmount(current, investment.assumedReturn, months);
+  if (!investment.continuing || isLumpSumInvestment(investment.type)) return carried;
+  return carried + futureValueSeries(investment.amount, investment.assumedReturn, Math.min(months, investment.monthsRemaining));
+}
+
+export function summarizeInvestments(investments: CurrentInvestment[], monthsToTarget: number) {
+  return {
+    monthlyCommitment: investments.filter((item) => !isLumpSumInvestment(item.type) && item.continuing).reduce((sum, item) => sum + (item.amount || 0), 0),
+    currentCorpus: investments.reduce((sum, item) => sum + estimateInvestmentCurrentValue(item), 0),
+    projectedCorpus: investments.reduce((sum, item) => sum + projectInvestmentValue(item, monthsToTarget), 0),
+  };
+}
+
+function futureValueSeries(monthly: number, annualRate: number, months: number) {
+  let value = 0;
+  const r = annualRate / 12 / 100;
+  for (let month = 1; month <= Math.max(0, Math.round(months)); month += 1) value = (value + monthly) * (1 + r);
+  return value;
+}
+
+function futureValueAmount(amount: number, annualRate: number, months: number) {
+  return (amount || 0) * Math.pow(1 + annualRate / 12 / 100, Math.max(0, Math.round(months)));
 }
 
 export const EMPLOYMENT_TYPES = [
@@ -259,8 +342,7 @@ export function calculateAffordabilityPlan(
     (finances.expenses.family || 0) +
     (finances.expenses.health || 0) +
     (finances.expenses.daily || 0);
-  const currentInvestments = finances.expenses.investments || 0;
-  const investmentRatio = currentInvestments > 0 ? surplusAfterEmi / currentInvestments : surplusAfterEmi > 0 ? 2 : 0;
+  const investmentRatio = surplusAfterEmi > 0 ? 2 : 0;
 
   return {
     verdict,
@@ -315,7 +397,7 @@ export function calculateAffordabilityPlan(
       },
       {
         name: "Layer 5 — Future Stability",
-        label: "Monthly surplus compared with current investments",
+        label: "Monthly surplus after living costs and existing EMIs",
         score: scoreByRatio(investmentRatio, [
           [1, 100],
           [0.75, 75],
