@@ -422,7 +422,7 @@ function buildMetrics(label: string, side: CompareSide, finances: Finances, prof
   const principal = loanAmount(side.home);
   const totalInterest = Math.max(0, plan.newEmi * side.home.tenureYears * 12 - principal);
   const affordabilityScore = Math.round(plan.layerScores.reduce((sum, layer) => sum + layer.score, 0) / plan.layerScores.length);
-  const monthlyInvestment = Math.max(0, finances.expenses.investments + Math.min(0, plan.surplusAfterEmi));
+  const monthlyInvestment = Math.max(0, plan.surplusAfterEmi);
   const month60Corpus = futureValueMonthly(monthlyInvestment, 60, 0.12);
   const stage1 = stagePayment(side.home, 0);
   const stage2 = stagePayment(side.home, 1);
@@ -447,7 +447,7 @@ function buildMetrics(label: string, side: CompareSide, finances: Finances, prof
     totalInterest,
     totalCostOfOwnership: side.home.propertyCost + side.home.registrationStampDuty + side.home.interiorBudget + totalInterest,
     month60Corpus,
-    investmentContinuity: plan.surplusAfterEmi >= finances.expenses.investments * 0.5 ? "Maintained" : "Reduced",
+    investmentContinuity: plan.surplusAfterEmi > 0 ? "Available" : "Constrained",
     stage1,
     stage2,
     possessionMonth: side.home.possessionMonth,

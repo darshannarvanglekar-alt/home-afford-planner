@@ -9,9 +9,9 @@ export const Route = createFileRoute("/privacy")({
 
 const sections = [
   ["What we collect", "We collect your name and email address when you sign in. We store your financial summaries and property plans to power your affordability plans."],
-  ["What we do NOT collect", "We do not store your bank statements. Uploaded files are analysed in memory and permanently deleted immediately after extraction."],
+  ["What we do NOT collect", "We do not store your uploaded statements. Uploaded files are analysed in memory and permanently deleted immediately after extraction."],
   ["How we use your data", "Your data is used only to generate your affordability plan. We do not sell your data to any third party."],
-  ["Data security", "Your data is stored securely on Supabase with industry-standard encryption."],
+  ["Data security", "Your data is stored securely with industry-standard encryption."],
   ["Contact", "For any privacy concerns contact us at: [placeholder email]"],
 ];
 
