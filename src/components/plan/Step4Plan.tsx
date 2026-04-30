@@ -268,7 +268,10 @@ export function Step4Plan({
         finances={finances}
         investments={investments}
         home={home}
+        profile={profile}
+        planName={planName}
         planSurplus={plan.surplusAfterEmi}
+        safetyAllocation={safetyAllocation}
         onSafetyAllocation={setSafetyAllocation}
       />
 
@@ -707,13 +710,19 @@ function CorpusBuilder({
   finances,
   investments,
   home,
+  profile,
+  planName,
   planSurplus,
+  safetyAllocation,
   onSafetyAllocation,
 }: {
   finances: Finances;
   investments: CurrentInvestment[];
   home: Home;
+  profile: Profile;
+  planName?: string;
   planSurplus: number;
+  safetyAllocation: number;
   onSafetyAllocation: (amount: number) => void;
 }) {
   const targetDefault = Math.max(
