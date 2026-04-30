@@ -8,12 +8,14 @@ const suggestionSchema = z.object({
   explanation: z.string().min(1).max(500),
   impact: z.string().min(1).max(80),
   type: z.enum(["opportunity", "warning", "action"]),
-  simulation: z.object({
-    monthlyInvestment: z.number().optional(),
-    downPayment: z.number().optional(),
-    possessionMonth: z.number().optional(),
-    emergencyFundPref: z.enum(["conservative", "balanced", "aggressive"]).optional(),
-  }).optional(),
+  simulation: z
+    .object({
+      monthlyInvestment: z.number().optional(),
+      downPayment: z.number().optional(),
+      possessionMonth: z.number().optional(),
+      emergencyFundPref: z.enum(["conservative", "balanced", "aggressive"]).optional(),
+    })
+    .optional(),
 });
 
 const profileSchema = z.object({
@@ -103,14 +105,21 @@ export const Route = createFileRoute("/api/generate-plan-suggestions")({
           if (!apiKey) return jsonError("AI suggestions are not configured yet.", 500);
 
           const response = await callAiWithRetry(apiKey, parsed.data.profile);
-          if (!response.ok) return jsonError("AI suggestions are busy right now. Please try regenerating.", response.status);
+          if (!response.ok)
+            return jsonError(
+              "AI suggestions are busy right now. Please try regenerating.",
+              response.status,
+            );
 
-          const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+          const payload = (await response.json()) as {
+            choices?: Array<{ message?: { content?: string } }>;
+          };
           const suggestions = parseSuggestions(payload.choices?.[0]?.message?.content ?? "");
 
           return Response.json({ suggestions: suggestions.slice(0, 5) });
         } catch (error) {
-          const message = error instanceof Error ? error.message : "We couldn't generate suggestions right now.";
+          const message =
+            error instanceof Error ? error.message : "We couldn't generate suggestions right now.";
           return jsonError(message, message.includes("sign in") ? 401 : 500);
         }
       },
@@ -169,21 +178,39 @@ async function callAiWithRetry(apiKey: string, profile: z.infer<typeof profileSc
 
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
-      const response = await fetch(process.env.LOVABLE_API_KEY ? "https://ai.gateway.lovable.dev/v1/chat/completions" : "https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
+      const response = await fetch(
+        process.env.LOVABLE_API_KEY
+          ? "https://ai.gateway.lovable.dev/v1/chat/completions"
+          : "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body,
         },
-        body,
-      });
+      );
 
       if (response.ok || attempt === 2) {
-        if (!response.ok) console.error("AI suggestions API failed", { status: response.status, body: await response.clone().text().catch(() => "Unable to read error body") });
+        if (!response.ok)
+          console.error("AI suggestions API failed", {
+            status: response.status,
+            body: await response
+              .clone()
+              .text()
+              .catch(() => "Unable to read error body"),
+          });
         return response;
       }
 
-      console.error("AI suggestions API attempt failed; retrying", { status: response.status, body: await response.clone().text().catch(() => "Unable to read error body") });
+      console.error("AI suggestions API attempt failed; retrying", {
+        status: response.status,
+        body: await response
+          .clone()
+          .text()
+          .catch(() => "Unable to read error body"),
+      });
     } catch (error) {
       console.error("AI suggestions API request error", { attempt, error });
       if (attempt === 2) throw error;
@@ -196,8 +223,12 @@ async function callAiWithRetry(apiKey: string, profile: z.infer<typeof profileSc
 }
 
 function parseSuggestions(content: string) {
-  const cleaned = content.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-  const jsonText = cleaned.startsWith("[") ? cleaned : cleaned.match(/\[[\s\S]*\]/)?.[0] ?? "[]";
+  const cleaned = content
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
+  const jsonText = cleaned.startsWith("[") ? cleaned : (cleaned.match(/\[[\s\S]*\]/)?.[0] ?? "[]");
   const parsed = z.array(suggestionSchema).safeParse(JSON.parse(jsonText));
   return parsed.success ? parsed.data : [];
 }

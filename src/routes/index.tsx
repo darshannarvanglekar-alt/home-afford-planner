@@ -90,8 +90,8 @@ function LandingPage() {
             </h1>
 
             <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg">
-              Upload your statements or enter your numbers. Get a real
-              month-by-month affordability plan — not just an EMI calculator.
+              Upload your statements or enter your numbers. Get a real month-by-month affordability
+              plan — not just an EMI calculator.
             </p>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

@@ -18,9 +18,7 @@ export function WizardProgress({ current }: { current: number }) {
         <span className="text-xs font-medium text-muted-foreground">
           Step {current} of {STEPS.length}
         </span>
-        <span className="text-sm font-semibold text-foreground">
-          {STEPS[current - 1]?.label}
-        </span>
+        <span className="text-sm font-semibold text-foreground">{STEPS[current - 1]?.label}</span>
       </div>
 
       <div className="relative">

@@ -1,6 +1,18 @@
 import * as React from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { FileText, FolderOpen, GitCompareArrows, Home, LogOut, MoreVertical, Pencil, Plus, Settings, Trash2, User as UserIcon } from "lucide-react";
+import {
+  FileText,
+  FolderOpen,
+  GitCompareArrows,
+  Home,
+  LogOut,
+  MoreVertical,
+  Pencil,
+  Plus,
+  Settings,
+  Trash2,
+  User as UserIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -150,7 +162,9 @@ function DashboardPage() {
 
   const saveRename = async (planId: string) => {
     const nextName = renameValue.trim() || "Untitled plan";
-    setPlans((current) => current?.map((p) => (p.id === planId ? { ...p, name: nextName } : p)) ?? current);
+    setPlans(
+      (current) => current?.map((p) => (p.id === planId ? { ...p, name: nextName } : p)) ?? current,
+    );
     setRenamingPlanId(null);
     const { error } = await supabase.from("plans").update({ name: nextName }).eq("id", planId);
     if (error) toast.error("Something went wrong. Please check your connection and try again.");
@@ -261,11 +275,7 @@ function DashboardPage() {
                 </div>
               </div>
               <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto"
-                  onClick={handleStartPlan}
-                >
+                <Button size="lg" className="w-full sm:w-auto" onClick={handleStartPlan}>
                   <Plus className="h-4 w-4" />
                   Start New Plan
                 </Button>
@@ -287,13 +297,23 @@ function DashboardPage() {
           <div className="mt-4">
             {plans === null ? (
               <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, index) => <PlanCardSkeleton key={index} />)}
-                {slowLoad && <p className="text-center text-sm text-muted-foreground">Having trouble loading? Try refreshing.</p>}
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <PlanCardSkeleton key={index} />
+                ))}
+                {slowLoad && (
+                  <p className="text-center text-sm text-muted-foreground">
+                    Having trouble loading? Try refreshing.
+                  </p>
+                )}
               </div>
             ) : loadError ? (
               <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-soft">
-                <p className="text-sm font-medium text-foreground">Something went wrong. Please check your connection and try again.</p>
-                <Button className="mt-4" onClick={() => setReloadKey((key) => key + 1)}>Retry</Button>
+                <p className="text-sm font-medium text-foreground">
+                  Something went wrong. Please check your connection and try again.
+                </p>
+                <Button className="mt-4" onClick={() => setReloadKey((key) => key + 1)}>
+                  Retry
+                </Button>
               </div>
             ) : plans.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center">
@@ -302,18 +322,29 @@ function DashboardPage() {
                 </div>
                 <p className="mt-4 text-xl font-extrabold text-foreground">No plans yet</p>
                 <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                  Your home affordability plans will appear here. Start your first plan to see how your dream home fits your finances.
+                  Your home affordability plans will appear here. Start your first plan to see how
+                  your dream home fits your finances.
                 </p>
-                <Button className="mt-6 w-full sm:w-auto" size="lg" onClick={handleStartPlan}>Start Your First Plan</Button>
+                <Button className="mt-6 w-full sm:w-auto" size="lg" onClick={handleStartPlan}>
+                  Start Your First Plan
+                </Button>
               </div>
             ) : (
               <ul className="grid gap-3">
                 {plans.map((p) => {
                   const parsed = parsePlanData(p.data);
                   const verdict = parsed.verdict;
-                  const verdictClass = verdict === "safe" ? "bg-success-soft text-success-soft-foreground border-success/20" : verdict === "stretch" ? "bg-warning-soft text-warning-soft-foreground border-warning/20" : "bg-danger-soft text-danger-soft-foreground border-destructive/20";
+                  const verdictClass =
+                    verdict === "safe"
+                      ? "bg-success-soft text-success-soft-foreground border-success/20"
+                      : verdict === "stretch"
+                        ? "bg-warning-soft text-warning-soft-foreground border-warning/20"
+                        : "bg-danger-soft text-danger-soft-foreground border-destructive/20";
                   return (
-                    <li key={p.id} className="rounded-xl border border-border bg-card p-4 shadow-soft">
+                    <li
+                      key={p.id}
+                      className="rounded-xl border border-border bg-card p-4 shadow-soft"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           {renamingPlanId === p.id ? (
@@ -328,14 +359,20 @@ function DashboardPage() {
                               }}
                             />
                           ) : (
-                            <div className="truncate text-lg font-extrabold text-foreground">{p.name}</div>
+                            <div className="truncate text-lg font-extrabold text-foreground">
+                              {p.name}
+                            </div>
                           )}
                           <div className="mt-3 flex flex-wrap items-center gap-2">
-                            <Badge variant="outline">{propertyTypeLabel(parsed.home.propertyType)}</Badge>
+                            <Badge variant="outline">
+                              {propertyTypeLabel(parsed.home.propertyType)}
+                            </Badge>
                             <Badge variant="secondary">{formatINR(parsed.home.propertyCost)}</Badge>
                             <Badge className={verdictClass}>{verdict.toUpperCase()}</Badge>
                           </div>
-                          <p className="mt-3 text-xs text-muted-foreground">Last updated: {timeAgo(p.updated_at)}</p>
+                          <p className="mt-3 text-xs text-muted-foreground">
+                            Last updated: {timeAgo(p.updated_at)}
+                          </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
                           <Button variant="outline" size="sm" onClick={() => openPlan(p.id)}>
@@ -343,16 +380,44 @@ function DashboardPage() {
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" aria-label={`Plan actions for ${p.name}`}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={`Plan actions for ${p.name}`}
+                              >
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
-                              <DropdownMenuItem onClick={() => openPlan(p.id)}><FolderOpen className="h-4 w-4" />Open Plan</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate({ to: "/compare", search: { planA: p.id } })}><GitCompareArrows className="h-4 w-4" />Compare with another plan</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => { setRenamingPlanId(p.id); setRenameValue(p.name); }}><Pencil className="h-4 w-4" />Rename Plan</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openPlan(p.id)}>
+                                <FolderOpen className="h-4 w-4" />
+                                Open Plan
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  navigate({ to: "/compare", search: { planA: p.id } })
+                                }
+                              >
+                                <GitCompareArrows className="h-4 w-4" />
+                                Compare with another plan
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setRenamingPlanId(p.id);
+                                  setRenameValue(p.name);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                                Rename Plan
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTarget(p)}><Trash2 className="h-4 w-4" />Delete Plan</DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setDeleteTarget(p)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Delete Plan
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -375,7 +440,10 @@ function DashboardPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => void deletePlan()}>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => void deletePlan()}
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

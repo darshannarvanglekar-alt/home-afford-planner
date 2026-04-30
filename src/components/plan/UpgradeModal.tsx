@@ -54,8 +54,15 @@ export function UpgradeModal({
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ planType }),
       });
-      const payload = await res.json() as { keyId?: string; subscriptionId?: string; name?: string; email?: string; error?: string };
-      if (!res.ok || !payload.keyId || !payload.subscriptionId) throw new Error(payload.error || "Couldn't start checkout.");
+      const payload = (await res.json()) as {
+        keyId?: string;
+        subscriptionId?: string;
+        name?: string;
+        email?: string;
+        error?: string;
+      };
+      if (!res.ok || !payload.keyId || !payload.subscriptionId)
+        throw new Error(payload.error || "Couldn't start checkout.");
 
       const checkout = new window.Razorpay!({
         key: payload.keyId,
@@ -70,8 +77,9 @@ export function UpgradeModal({
             headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify({ ...response, planType }),
           });
-          const confirmPayload = await confirmRes.json() as { error?: string };
-          if (!confirmRes.ok) throw new Error(confirmPayload.error || "Payment verification failed.");
+          const confirmPayload = (await confirmRes.json()) as { error?: string };
+          if (!confirmRes.ok)
+            throw new Error(confirmPayload.error || "Payment verification failed.");
           toast.success("🎉 Welcome to Pro! All features are now unlocked.");
           onOpenChange(false);
           window.location.reload();
@@ -126,11 +134,34 @@ export function UpgradeModal({
   );
 }
 
-function PlanCard({ title, price, cadence, note, button, featured, loading, disabled, onClick }: {
-  title: string; price: string; cadence: string; note?: string; button: string; featured?: boolean; loading: boolean; disabled: boolean; onClick: () => void;
+function PlanCard({
+  title,
+  price,
+  cadence,
+  note,
+  button,
+  featured,
+  loading,
+  disabled,
+  onClick,
+}: {
+  title: string;
+  price: string;
+  cadence: string;
+  note?: string;
+  button: string;
+  featured?: boolean;
+  loading: boolean;
+  disabled: boolean;
+  onClick: () => void;
 }) {
   return (
-    <article className={cn("relative rounded-2xl border bg-card p-5 shadow-soft", featured ? "border-primary ring-2 ring-primary/15" : "border-border")}>
+    <article
+      className={cn(
+        "relative rounded-2xl border bg-card p-5 shadow-soft",
+        featured ? "border-primary ring-2 ring-primary/15" : "border-border",
+      )}
+    >
       {featured && <Badge className="absolute right-4 top-4">Popular</Badge>}
       <h3 className="text-lg font-bold text-foreground">{title}</h3>
       <div className="mt-3 flex items-end gap-1">
@@ -146,7 +177,13 @@ function PlanCard({ title, price, cadence, note, button, featured, loading, disa
           </li>
         ))}
       </ul>
-      <Button type="button" className="mt-5 w-full" variant={featured ? "default" : "outline"} disabled={disabled} onClick={onClick}>
+      <Button
+        type="button"
+        className="mt-5 w-full"
+        variant={featured ? "default" : "outline"}
+        disabled={disabled}
+        onClick={onClick}
+      >
         {loading && <Loader2 className="h-4 w-4 animate-spin" />}
         {button}
       </Button>

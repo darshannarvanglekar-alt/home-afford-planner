@@ -9,8 +9,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingLogo } from "@/components/LoadingLogo";
@@ -73,7 +86,13 @@ const newSide = (label: SideKey): CompareSide => ({
   mode: "new",
   planId: "new",
   name: `Property ${label}`,
-  home: { ...defaultHome, propertyType: "ready", propertyCost: 0, downPayment: 0, builderStages: defaultHome.builderStages.map((s) => ({ ...s })) },
+  home: {
+    ...defaultHome,
+    propertyType: "ready",
+    propertyCost: 0,
+    downPayment: 0,
+    builderStages: defaultHome.builderStages.map((s) => ({ ...s })),
+  },
 });
 
 function ComparePage() {
@@ -131,7 +150,11 @@ function ComparePage() {
   }, [user, planA]);
 
   const noPlans = plans !== null && plans.length === 0;
-  const canCompare = !!sharedFinances && !!sharedProfile && sideA.home.propertyCost > 0 && sideB.home.propertyCost > 0;
+  const canCompare =
+    !!sharedFinances &&
+    !!sharedProfile &&
+    sideA.home.propertyCost > 0 &&
+    sideB.home.propertyCost > 0;
 
   const selectPlan = (side: SideKey, value: string) => {
     const setter = side === "A" ? setSideA : setSideB;
@@ -149,7 +172,10 @@ function ComparePage() {
     }
   };
 
-  const updateSide = (side: SideKey, patch: Partial<CompareSide> | ((current: CompareSide) => CompareSide)) => {
+  const updateSide = (
+    side: SideKey,
+    patch: Partial<CompareSide> | ((current: CompareSide) => CompareSide),
+  ) => {
     const setter = side === "A" ? setSideA : setSideB;
     setter((current) => (typeof patch === "function" ? patch(current) : { ...current, ...patch }));
     setResults(null);
@@ -189,13 +215,19 @@ function ComparePage() {
       const response = await fetch("/api/generate-comparison-summary", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ propertyA: summaryPayload(nextResults.A), propertyB: summaryPayload(nextResults.B) }),
+        body: JSON.stringify({
+          propertyA: summaryPayload(nextResults.A),
+          propertyB: summaryPayload(nextResults.B),
+        }),
       });
       const payload = (await response.json()) as { summary?: string; error?: string };
-      if (!response.ok || !payload.summary) throw new Error(payload.error ?? "We couldn't generate the AI summary right now.");
+      if (!response.ok || !payload.summary)
+        throw new Error(payload.error ?? "We couldn't generate the AI summary right now.");
       setSummary(payload.summary);
     } catch (error) {
-      setSummary("AI analysis is temporarily unavailable. Please fill in the details manually below.");
+      setSummary(
+        "AI analysis is temporarily unavailable. Please fill in the details manually below.",
+      );
     } finally {
       setSummaryLoading(false);
     }
@@ -227,9 +259,14 @@ function ComparePage() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-background/85 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link to="/dashboard" className="text-lg font-extrabold text-primary">HomeAfford</Link>
+          <Link to="/dashboard" className="text-lg font-extrabold text-primary">
+            HomeAfford
+          </Link>
           <Button variant="ghost" asChild>
-            <Link to="/dashboard"><ArrowLeft className="h-4 w-4" />Dashboard</Link>
+            <Link to="/dashboard">
+              <ArrowLeft className="h-4 w-4" />
+              Dashboard
+            </Link>
           </Button>
         </div>
       </header>
@@ -237,34 +274,84 @@ function ComparePage() {
       <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Compare Two Properties</h1>
-            <p className="mt-2 text-sm text-muted-foreground sm:text-base">See which home works better for your finances — side by side.</p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+              Compare Two Properties
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground sm:text-base">
+              See which home works better for your finances — side by side.
+            </p>
           </div>
-          <Badge variant="secondary" className="w-fit">Shared profile from latest saved plan</Badge>
+          <Badge variant="secondary" className="w-fit">
+            Shared profile from latest saved plan
+          </Badge>
         </div>
 
         {noPlans ? (
           <Card className="mt-8">
             <CardContent className="p-6 text-center sm:p-10">
               <BarChart3 className="mx-auto h-10 w-10 text-primary" />
-              <h2 className="mt-4 text-xl font-extrabold text-foreground">Complete at least one plan first to use property comparison.</h2>
-              <Button className="mt-6 w-full sm:max-w-sm" size="lg" onClick={() => navigate({ to: "/plan/new", search: { step: 1, planId: undefined } })}>Start a Plan</Button>
+              <h2 className="mt-4 text-xl font-extrabold text-foreground">
+                Complete at least one plan first to use property comparison.
+              </h2>
+              <Button
+                className="mt-6 w-full sm:max-w-sm"
+                size="lg"
+                onClick={() =>
+                  navigate({ to: "/plan/new", search: { step: 1, planId: undefined } })
+                }
+              >
+                Start a Plan
+              </Button>
             </CardContent>
           </Card>
         ) : (
           <>
             <section className="mt-8 grid gap-4 lg:grid-cols-2">
-              <PropertyCard side="A" labelClassName="text-primary" plans={plans} value={sideA} onSelect={selectPlan} onChange={updateSide} />
-              <PropertyCard side="B" labelClassName="text-warning" plans={plans} value={sideB} onSelect={selectPlan} onChange={updateSide} />
+              <PropertyCard
+                side="A"
+                labelClassName="text-primary"
+                plans={plans}
+                value={sideA}
+                onSelect={selectPlan}
+                onChange={updateSide}
+              />
+              <PropertyCard
+                side="B"
+                labelClassName="text-warning"
+                plans={plans}
+                value={sideB}
+                onSelect={selectPlan}
+                onChange={updateSide}
+              />
             </section>
 
-            <Button className="mt-5 h-12 w-full text-base font-semibold" onClick={() => void compareNow()} disabled={comparing}>
-              {comparing ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
+            <Button
+              className="mt-5 h-12 w-full text-base font-semibold"
+              onClick={() => void compareNow()}
+              disabled={comparing}
+            >
+              {comparing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <BarChart3 className="h-4 w-4" />
+              )}
               Compare Now
             </Button>
 
             {comparing && <ComparisonSkeleton />}
-            {results && <ComparisonResults results={results} summary={summary} summaryLoading={summaryLoading} onSave={saveAsPlan} savingSide={savingSide} onReset={() => { setResults(null); setSummary(""); }} />}
+            {results && (
+              <ComparisonResults
+                results={results}
+                summary={summary}
+                summaryLoading={summaryLoading}
+                onSave={saveAsPlan}
+                savingSide={savingSide}
+                onReset={() => {
+                  setResults(null);
+                  setSummary("");
+                }}
+              />
+            )}
           </>
         )}
       </main>
@@ -272,35 +359,104 @@ function ComparePage() {
   );
 }
 
-function PropertyCard({ side, labelClassName, plans, value, onSelect, onChange }: { side: SideKey; labelClassName: string; plans: PlanRow[]; value: CompareSide; onSelect: (side: SideKey, value: string) => void; onChange: (side: SideKey, patch: Partial<CompareSide> | ((current: CompareSide) => CompareSide)) => void }) {
-  const updateHome = (patch: Partial<Home>) => onChange(side, (current) => ({ ...current, mode: current.mode === "saved" ? "new" : current.mode, planId: current.mode === "saved" ? "new" : current.planId, home: { ...current.home, ...patch } }));
+function PropertyCard({
+  side,
+  labelClassName,
+  plans,
+  value,
+  onSelect,
+  onChange,
+}: {
+  side: SideKey;
+  labelClassName: string;
+  plans: PlanRow[];
+  value: CompareSide;
+  onSelect: (side: SideKey, value: string) => void;
+  onChange: (
+    side: SideKey,
+    patch: Partial<CompareSide> | ((current: CompareSide) => CompareSide),
+  ) => void;
+}) {
+  const updateHome = (patch: Partial<Home>) =>
+    onChange(side, (current) => ({
+      ...current,
+      mode: current.mode === "saved" ? "new" : current.mode,
+      planId: current.mode === "saved" ? "new" : current.planId,
+      home: { ...current.home, ...patch },
+    }));
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className={cn("text-base font-extrabold", labelClassName)}>Property {side}</CardTitle>
+        <CardTitle className={cn("text-base font-extrabold", labelClassName)}>
+          Property {side}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label>Select a saved plan or enter new property</Label>
-          <Select value={value.mode === "saved" ? value.planId : "new"} onValueChange={(next) => onSelect(side, next)}>
-            <SelectTrigger><SelectValue placeholder="Select a saved plan" /></SelectTrigger>
+          <Select
+            value={value.mode === "saved" ? value.planId : "new"}
+            onValueChange={(next) => onSelect(side, next)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a saved plan" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="new">Enter new property</SelectItem>
-              {plans.map((plan) => <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>)}
+              {plans.map((plan) => (
+                <SelectItem key={plan.id} value={plan.id}>
+                  {plan.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Property name" className="sm:col-span-2"><Input value={value.name} placeholder="Property name" onChange={(event) => onChange(side, { name: event.target.value, mode: value.mode === "saved" ? "new" : value.mode, planId: value.mode === "saved" ? "new" : value.planId })} /></Field>
-          <NumberField label="Property cost (₹)" value={value.home.propertyCost} onChange={(propertyCost) => updateHome({ propertyCost })} />
-          <NumberField label="Down payment (₹)" value={value.home.downPayment} onChange={(downPayment) => updateHome({ downPayment })} />
-          <NumberField label="Interest rate (%)" value={value.home.interestRateA} onChange={(interestRateA) => updateHome({ interestRateA })} />
-          <NumberField label="Tenure (years)" value={value.home.tenureYears} onChange={(tenureYears) => updateHome({ tenureYears: Math.max(1, Math.round(tenureYears)) })} />
+          <Field label="Property name" className="sm:col-span-2">
+            <Input
+              value={value.name}
+              placeholder="Property name"
+              onChange={(event) =>
+                onChange(side, {
+                  name: event.target.value,
+                  mode: value.mode === "saved" ? "new" : value.mode,
+                  planId: value.mode === "saved" ? "new" : value.planId,
+                })
+              }
+            />
+          </Field>
+          <NumberField
+            label="Property cost (₹)"
+            value={value.home.propertyCost}
+            onChange={(propertyCost) => updateHome({ propertyCost })}
+          />
+          <NumberField
+            label="Down payment (₹)"
+            value={value.home.downPayment}
+            onChange={(downPayment) => updateHome({ downPayment })}
+          />
+          <NumberField
+            label="Interest rate (%)"
+            value={value.home.interestRateA}
+            onChange={(interestRateA) => updateHome({ interestRateA })}
+          />
+          <NumberField
+            label="Tenure (years)"
+            value={value.home.tenureYears}
+            onChange={(tenureYears) =>
+              updateHome({ tenureYears: Math.max(1, Math.round(tenureYears)) })
+            }
+          />
           <Field label="Property type">
-            <Select value={value.home.propertyType} onValueChange={(propertyType: Home["propertyType"]) => updateHome({ propertyType })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={value.home.propertyType}
+              onValueChange={(propertyType: Home["propertyType"]) => updateHome({ propertyType })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ready">Ready to Move</SelectItem>
                 <SelectItem value="construction">Under Construction</SelectItem>
@@ -308,38 +464,99 @@ function PropertyCard({ side, labelClassName, plans, value, onSelect, onChange }
               </SelectContent>
             </Select>
           </Field>
-          <NumberField label="Possession month" value={value.home.possessionMonth} onChange={(possessionMonth) => updateHome({ possessionMonth: Math.max(1, Math.round(possessionMonth)) })} />
+          <NumberField
+            label="Possession month"
+            value={value.home.possessionMonth}
+            onChange={(possessionMonth) =>
+              updateHome({ possessionMonth: Math.max(1, Math.round(possessionMonth)) })
+            }
+          />
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function ComparisonResults({ results, summary, summaryLoading, onSave, savingSide, onReset }: { results: Results; summary: string; summaryLoading: boolean; onSave: (side: SideKey) => Promise<void>; savingSide: SideKey | null; onReset: () => void }) {
+function ComparisonResults({
+  results,
+  summary,
+  summaryLoading,
+  onSave,
+  savingSide,
+  onReset,
+}: {
+  results: Results;
+  summary: string;
+  summaryLoading: boolean;
+  onSave: (side: SideKey) => Promise<void>;
+  savingSide: SideKey | null;
+  onReset: () => void;
+}) {
   const rows = buildRows(results);
   return (
     <section className="mt-8 space-y-6">
-      <div className="hidden md:block"><ComparisonTable rows={rows} /></div>
+      <div className="hidden md:block">
+        <ComparisonTable rows={rows} />
+      </div>
       <div className="md:hidden">
         <Tabs defaultValue="compare">
-          <TabsList className="grid w-full grid-cols-3"><TabsTrigger value="a">Property A</TabsTrigger><TabsTrigger value="b">Property B</TabsTrigger><TabsTrigger value="compare">Compare</TabsTrigger></TabsList>
-          <TabsContent value="a"><MobileSide rows={rows} side="a" /></TabsContent>
-          <TabsContent value="b"><MobileSide rows={rows} side="b" /></TabsContent>
-          <TabsContent value="compare" className="overflow-x-auto"><ComparisonTable rows={rows} /></TabsContent>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="a">Property A</TabsTrigger>
+            <TabsTrigger value="b">Property B</TabsTrigger>
+            <TabsTrigger value="compare">Compare</TabsTrigger>
+          </TabsList>
+          <TabsContent value="a">
+            <MobileSide rows={rows} side="a" />
+          </TabsContent>
+          <TabsContent value="b">
+            <MobileSide rows={rows} side="b" />
+          </TabsContent>
+          <TabsContent value="compare" className="overflow-x-auto">
+            <ComparisonTable rows={rows} />
+          </TabsContent>
         </Tabs>
       </div>
 
       <Card className="border-l-4 border-l-primary">
-        <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Sparkles className="h-5 w-5 text-primary" />AI Summary</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="h-5 w-5 text-primary" />
+            AI Summary
+          </CardTitle>
+        </CardHeader>
         <CardContent>
-          {summaryLoading ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Generating summary…</p> : <p className="text-sm leading-6 text-foreground">{summary}</p>}
+          {summaryLoading ? (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Generating summary…
+            </p>
+          ) : (
+            <p className="text-sm leading-6 text-foreground">{summary}</p>
+          )}
         </CardContent>
       </Card>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Button variant="outline" onClick={() => void onSave("A")} disabled={savingSide !== null}>{savingSide === "A" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save Property A as Plan</Button>
-        <Button variant="outline" onClick={() => void onSave("B")} disabled={savingSide !== null}>{savingSide === "B" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save Property B as Plan</Button>
-        <Button variant="ghost" onClick={onReset}><RefreshCw className="h-4 w-4" />Change Properties</Button>
+        <Button variant="outline" onClick={() => void onSave("A")} disabled={savingSide !== null}>
+          {savingSide === "A" ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          Save Property A as Plan
+        </Button>
+        <Button variant="outline" onClick={() => void onSave("B")} disabled={savingSide !== null}>
+          {savingSide === "B" ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          Save Property B as Plan
+        </Button>
+        <Button variant="ghost" onClick={onReset}>
+          <RefreshCw className="h-4 w-4" />
+          Change Properties
+        </Button>
       </div>
     </section>
   );
@@ -351,15 +568,34 @@ function ComparisonTable({ rows }: { rows: CompareRow[] }) {
     <Card>
       <CardContent className="p-0">
         <Table>
-          <TableHeader><TableRow><TableHead>Metric</TableHead><TableHead>Property A</TableHead><TableHead>Property B</TableHead></TableRow></TableHeader>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Metric</TableHead>
+              <TableHead>Property A</TableHead>
+              <TableHead>Property B</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
             {rows.map((row) => {
               const showSection = row.section !== currentSection;
               currentSection = row.section;
               return (
                 <React.Fragment key={`${row.section}-${row.metric}`}>
-                  {showSection && <TableRow><TableCell colSpan={3} className="bg-muted/60 text-xs font-extrabold uppercase tracking-normal text-muted-foreground">{row.section}</TableCell></TableRow>}
-                  <TableRow><TableCell className="font-medium">{row.metric}</TableCell><ValueCell row={row} side="a" /><ValueCell row={row} side="b" /></TableRow>
+                  {showSection && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={3}
+                        className="bg-muted/60 text-xs font-extrabold uppercase tracking-normal text-muted-foreground"
+                      >
+                        {row.section}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  <TableRow>
+                    <TableCell className="font-medium">{row.metric}</TableCell>
+                    <ValueCell row={row} side="a" />
+                    <ValueCell row={row} side="b" />
+                  </TableRow>
                 </React.Fragment>
               );
             })}
@@ -371,34 +607,92 @@ function ComparisonTable({ rows }: { rows: CompareRow[] }) {
 }
 
 function MobileSide({ rows, side }: { rows: CompareRow[]; side: "a" | "b" }) {
-  return <Card><CardContent className="space-y-3 p-4">{rows.filter((row) => row.metric).map((row) => <div key={`${side}-${row.section}-${row.metric}`} className={cn("rounded-lg border border-border p-3", cellTone(row, side))}><p className="text-xs font-medium text-muted-foreground">{row.metric}</p><p className="mt-1 font-extrabold text-foreground">{side === "a" ? row.a : row.b}</p></div>)}</CardContent></Card>;
+  return (
+    <Card>
+      <CardContent className="space-y-3 p-4">
+        {rows
+          .filter((row) => row.metric)
+          .map((row) => (
+            <div
+              key={`${side}-${row.section}-${row.metric}`}
+              className={cn("rounded-lg border border-border p-3", cellTone(row, side))}
+            >
+              <p className="text-xs font-medium text-muted-foreground">{row.metric}</p>
+              <p className="mt-1 font-extrabold text-foreground">{side === "a" ? row.a : row.b}</p>
+            </div>
+          ))}
+      </CardContent>
+    </Card>
+  );
 }
 
 function ValueCell({ row, side }: { row: CompareRow; side: "a" | "b" }) {
-  return <TableCell className={cn("font-semibold", cellTone(row, side))}>{side === "a" ? row.a : row.b}</TableCell>;
+  return (
+    <TableCell className={cn("font-semibold", cellTone(row, side))}>
+      {side === "a" ? row.a : row.b}
+    </TableCell>
+  );
 }
 
 function cellTone(row: CompareRow, side: "a" | "b") {
   const winner = betterSide(row);
   if (!winner) return "";
-  return winner === side ? "bg-success-soft/60 text-success-soft-foreground" : "bg-warning-soft/60 text-warning-soft-foreground";
+  return winner === side
+    ? "bg-success-soft/60 text-success-soft-foreground"
+    : "bg-warning-soft/60 text-warning-soft-foreground";
 }
 
 function betterSide(row: CompareRow): "a" | "b" | null {
   if (row.tone === "none" || row.aRaw === row.bRaw) return null;
   if (row.tone === "higher") return Number(row.aRaw) > Number(row.bRaw) ? "a" : "b";
   if (row.tone === "lower") return Number(row.aRaw) < Number(row.bRaw) ? "a" : "b";
-  if (row.tone === "verdict") return verdictRank(row.aRaw as AffordabilityVerdict) > verdictRank(row.bRaw as AffordabilityVerdict) ? "a" : "b";
-  if (row.tone === "status") return statusRank(String(row.aRaw)) > statusRank(String(row.bRaw)) ? "a" : "b";
+  if (row.tone === "verdict")
+    return verdictRank(row.aRaw as AffordabilityVerdict) >
+      verdictRank(row.bRaw as AffordabilityVerdict)
+      ? "a"
+      : "b";
+  if (row.tone === "status")
+    return statusRank(String(row.aRaw)) > statusRank(String(row.bRaw)) ? "a" : "b";
   return null;
 }
 
-function Field({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
-  return <div className={cn("space-y-2", className)}><Label>{label}</Label>{children}</div>;
+function Field({
+  label,
+  className,
+  children,
+}: {
+  label: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={cn("space-y-2", className)}>
+      <Label>{label}</Label>
+      {children}
+    </div>
+  );
 }
 
-function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return <Field label={label}><Input type="number" inputMode="decimal" min="0" value={Number.isFinite(value) ? value : 0} onChange={(event) => onChange(Number(event.target.value) || 0)} /></Field>;
+function NumberField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <Field label={label}>
+      <Input
+        type="number"
+        inputMode="decimal"
+        min="0"
+        value={Number.isFinite(value) ? value : 0}
+        onChange={(event) => onChange(Number(event.target.value) || 0)}
+      />
+    </Field>
+  );
 }
 
 function ComparisonSkeleton() {
@@ -406,7 +700,9 @@ function ComparisonSkeleton() {
     <section className="mt-8 rounded-2xl border border-border bg-card p-5 shadow-soft">
       <p className="mb-4 text-sm font-medium text-muted-foreground">Comparing both properties...</p>
       <div className="space-y-3">
-        {Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-10 w-full rounded-lg" />)}
+        {Array.from({ length: 8 }).map((_, index) => (
+          <Skeleton key={index} className="h-10 w-full rounded-lg" />
+        ))}
       </div>
     </section>
   );
@@ -421,12 +717,18 @@ function buildMetrics(label: string, side: CompareSide, finances: Finances, prof
   const plan = calculateAffordabilityPlan(finances, side.home, profile);
   const principal = loanAmount(side.home);
   const totalInterest = Math.max(0, plan.newEmi * side.home.tenureYears * 12 - principal);
-  const affordabilityScore = Math.round(plan.layerScores.reduce((sum, layer) => sum + layer.score, 0) / plan.layerScores.length);
+  const affordabilityScore = Math.round(
+    plan.layerScores.reduce((sum, layer) => sum + layer.score, 0) / plan.layerScores.length,
+  );
   const monthlyInvestment = Math.max(0, plan.surplusAfterEmi);
   const month60Corpus = futureValueMonthly(monthlyInvestment, 60, 0.12);
   const stage1 = stagePayment(side.home, 0);
   const stage2 = stagePayment(side.home, 1);
-  const prePossessionEmi = calcEMI(prePossessionPrincipal(side.home), side.home.interestRateA, side.home.tenureYears);
+  const prePossessionEmi = calcEMI(
+    prePossessionPrincipal(side.home),
+    side.home.interestRateA,
+    side.home.tenureYears,
+  );
   return {
     label,
     name: side.name,
@@ -445,7 +747,11 @@ function buildMetrics(label: string, side: CompareSide, finances: Finances, prof
     emergencyFundStatus: plan.emergencyStatus,
     negativeSurplusMonths: plan.surplusAfterEmi < 0 ? Math.min(60, side.home.tenureYears * 12) : 0,
     totalInterest,
-    totalCostOfOwnership: side.home.propertyCost + side.home.registrationStampDuty + side.home.interiorBudget + totalInterest,
+    totalCostOfOwnership:
+      side.home.propertyCost +
+      side.home.registrationStampDuty +
+      side.home.interiorBudget +
+      totalInterest,
     month60Corpus,
     investmentContinuity: plan.surplusAfterEmi > 0 ? "Available" : "Constrained",
     stage1,
@@ -457,38 +763,214 @@ function buildMetrics(label: string, side: CompareSide, finances: Finances, prof
 
 function buildRows(results: Results): CompareRow[] {
   const rows: CompareRow[] = [
-    row("PURCHASE DETAILS", "Property Cost", formatINR(results.A.propertyCost), formatINR(results.B.propertyCost), results.A.propertyCost, results.B.propertyCost, "lower"),
-    row("PURCHASE DETAILS", "Down Payment", formatINR(results.A.downPayment), formatINR(results.B.downPayment), results.A.downPayment, results.B.downPayment, "higher"),
-    row("PURCHASE DETAILS", "Loan Amount", formatINR(results.A.loanAmount), formatINR(results.B.loanAmount), results.A.loanAmount, results.B.loanAmount, "lower"),
-    row("PURCHASE DETAILS", "Interest Rate", `${results.A.interestRate}%`, `${results.B.interestRate}%`, results.A.interestRate, results.B.interestRate, "lower"),
-    row("PURCHASE DETAILS", "Tenure", `${results.A.tenureYears} yrs`, `${results.B.tenureYears} yrs`, results.A.tenureYears, results.B.tenureYears, "lower"),
-    row("MONTHLY IMPACT", "Monthly EMI", formatINR(results.A.monthlyEmi), formatINR(results.B.monthlyEmi), results.A.monthlyEmi, results.B.monthlyEmi, "lower"),
-    row("MONTHLY IMPACT", "Monthly Surplus", formatINR(results.A.monthlySurplus), formatINR(results.B.monthlySurplus), results.A.monthlySurplus, results.B.monthlySurplus, "higher"),
-    row("MONTHLY IMPACT", "EMI to Income Ratio", `${results.A.emiToIncomeRatio.toFixed(1)}%`, `${results.B.emiToIncomeRatio.toFixed(1)}%`, results.A.emiToIncomeRatio, results.B.emiToIncomeRatio, "lower"),
-    row("MONTHLY IMPACT", "Surplus after EMI", formatINR(results.A.surplusAfterEmi), formatINR(results.B.surplusAfterEmi), results.A.surplusAfterEmi, results.B.surplusAfterEmi, "higher"),
-    row("AFFORDABILITY", "Verdict", results.A.verdict.toUpperCase(), results.B.verdict.toUpperCase(), results.A.verdict, results.B.verdict, "verdict"),
-    row("AFFORDABILITY", "Affordability Score", `${results.A.affordabilityScore}/100`, `${results.B.affordabilityScore}/100`, results.A.affordabilityScore, results.B.affordabilityScore, "higher"),
-    row("AFFORDABILITY", "Emergency Fund Status", results.A.emergencyFundStatus, results.B.emergencyFundStatus, results.A.emergencyFundStatus, results.B.emergencyFundStatus, "status"),
-    row("AFFORDABILITY", "Months with -ve surplus", String(results.A.negativeSurplusMonths), String(results.B.negativeSurplusMonths), results.A.negativeSurplusMonths, results.B.negativeSurplusMonths, "lower"),
-    row("LONG TERM", "Total Interest Payable", formatINR(results.A.totalInterest), formatINR(results.B.totalInterest), results.A.totalInterest, results.B.totalInterest, "lower"),
-    row("LONG TERM", "Total Cost of Ownership", formatINR(results.A.totalCostOfOwnership), formatINR(results.B.totalCostOfOwnership), results.A.totalCostOfOwnership, results.B.totalCostOfOwnership, "lower"),
-    row("LONG TERM", "Month-60 Corpus", formatINR(results.A.month60Corpus), formatINR(results.B.month60Corpus), results.A.month60Corpus, results.B.month60Corpus, "higher"),
-    row("LONG TERM", "Investment continuity", results.A.investmentContinuity, results.B.investmentContinuity, results.A.investmentContinuity, results.B.investmentContinuity, "status"),
+    row(
+      "PURCHASE DETAILS",
+      "Property Cost",
+      formatINR(results.A.propertyCost),
+      formatINR(results.B.propertyCost),
+      results.A.propertyCost,
+      results.B.propertyCost,
+      "lower",
+    ),
+    row(
+      "PURCHASE DETAILS",
+      "Down Payment",
+      formatINR(results.A.downPayment),
+      formatINR(results.B.downPayment),
+      results.A.downPayment,
+      results.B.downPayment,
+      "higher",
+    ),
+    row(
+      "PURCHASE DETAILS",
+      "Loan Amount",
+      formatINR(results.A.loanAmount),
+      formatINR(results.B.loanAmount),
+      results.A.loanAmount,
+      results.B.loanAmount,
+      "lower",
+    ),
+    row(
+      "PURCHASE DETAILS",
+      "Interest Rate",
+      `${results.A.interestRate}%`,
+      `${results.B.interestRate}%`,
+      results.A.interestRate,
+      results.B.interestRate,
+      "lower",
+    ),
+    row(
+      "PURCHASE DETAILS",
+      "Tenure",
+      `${results.A.tenureYears} yrs`,
+      `${results.B.tenureYears} yrs`,
+      results.A.tenureYears,
+      results.B.tenureYears,
+      "lower",
+    ),
+    row(
+      "MONTHLY IMPACT",
+      "Monthly EMI",
+      formatINR(results.A.monthlyEmi),
+      formatINR(results.B.monthlyEmi),
+      results.A.monthlyEmi,
+      results.B.monthlyEmi,
+      "lower",
+    ),
+    row(
+      "MONTHLY IMPACT",
+      "Monthly Surplus",
+      formatINR(results.A.monthlySurplus),
+      formatINR(results.B.monthlySurplus),
+      results.A.monthlySurplus,
+      results.B.monthlySurplus,
+      "higher",
+    ),
+    row(
+      "MONTHLY IMPACT",
+      "EMI to Income Ratio",
+      `${results.A.emiToIncomeRatio.toFixed(1)}%`,
+      `${results.B.emiToIncomeRatio.toFixed(1)}%`,
+      results.A.emiToIncomeRatio,
+      results.B.emiToIncomeRatio,
+      "lower",
+    ),
+    row(
+      "MONTHLY IMPACT",
+      "Surplus after EMI",
+      formatINR(results.A.surplusAfterEmi),
+      formatINR(results.B.surplusAfterEmi),
+      results.A.surplusAfterEmi,
+      results.B.surplusAfterEmi,
+      "higher",
+    ),
+    row(
+      "AFFORDABILITY",
+      "Verdict",
+      results.A.verdict.toUpperCase(),
+      results.B.verdict.toUpperCase(),
+      results.A.verdict,
+      results.B.verdict,
+      "verdict",
+    ),
+    row(
+      "AFFORDABILITY",
+      "Affordability Score",
+      `${results.A.affordabilityScore}/100`,
+      `${results.B.affordabilityScore}/100`,
+      results.A.affordabilityScore,
+      results.B.affordabilityScore,
+      "higher",
+    ),
+    row(
+      "AFFORDABILITY",
+      "Emergency Fund Status",
+      results.A.emergencyFundStatus,
+      results.B.emergencyFundStatus,
+      results.A.emergencyFundStatus,
+      results.B.emergencyFundStatus,
+      "status",
+    ),
+    row(
+      "AFFORDABILITY",
+      "Months with -ve surplus",
+      String(results.A.negativeSurplusMonths),
+      String(results.B.negativeSurplusMonths),
+      results.A.negativeSurplusMonths,
+      results.B.negativeSurplusMonths,
+      "lower",
+    ),
+    row(
+      "LONG TERM",
+      "Total Interest Payable",
+      formatINR(results.A.totalInterest),
+      formatINR(results.B.totalInterest),
+      results.A.totalInterest,
+      results.B.totalInterest,
+      "lower",
+    ),
+    row(
+      "LONG TERM",
+      "Total Cost of Ownership",
+      formatINR(results.A.totalCostOfOwnership),
+      formatINR(results.B.totalCostOfOwnership),
+      results.A.totalCostOfOwnership,
+      results.B.totalCostOfOwnership,
+      "lower",
+    ),
+    row(
+      "LONG TERM",
+      "Month-60 Corpus",
+      formatINR(results.A.month60Corpus),
+      formatINR(results.B.month60Corpus),
+      results.A.month60Corpus,
+      results.B.month60Corpus,
+      "higher",
+    ),
+    row(
+      "LONG TERM",
+      "Investment continuity",
+      results.A.investmentContinuity,
+      results.B.investmentContinuity,
+      results.A.investmentContinuity,
+      results.B.investmentContinuity,
+      "status",
+    ),
   ];
 
   if (results.A.propertyType === "construction" || results.B.propertyType === "construction") {
     rows.push(
-      row("BUILDER STAGES", "Stage 1 Payment", formatINR(results.A.stage1), formatINR(results.B.stage1), results.A.stage1, results.B.stage1, "lower"),
-      row("BUILDER STAGES", "Stage 2 Payment", formatINR(results.A.stage2), formatINR(results.B.stage2), results.A.stage2, results.B.stage2, "lower"),
-      row("BUILDER STAGES", "Possession Month", `M ${results.A.possessionMonth}`, `M ${results.B.possessionMonth}`, results.A.possessionMonth, results.B.possessionMonth, "lower"),
-      row("BUILDER STAGES", "Pre-possession EMI", formatINR(results.A.prePossessionEmi), formatINR(results.B.prePossessionEmi), results.A.prePossessionEmi, results.B.prePossessionEmi, "lower"),
+      row(
+        "BUILDER STAGES",
+        "Stage 1 Payment",
+        formatINR(results.A.stage1),
+        formatINR(results.B.stage1),
+        results.A.stage1,
+        results.B.stage1,
+        "lower",
+      ),
+      row(
+        "BUILDER STAGES",
+        "Stage 2 Payment",
+        formatINR(results.A.stage2),
+        formatINR(results.B.stage2),
+        results.A.stage2,
+        results.B.stage2,
+        "lower",
+      ),
+      row(
+        "BUILDER STAGES",
+        "Possession Month",
+        `M ${results.A.possessionMonth}`,
+        `M ${results.B.possessionMonth}`,
+        results.A.possessionMonth,
+        results.B.possessionMonth,
+        "lower",
+      ),
+      row(
+        "BUILDER STAGES",
+        "Pre-possession EMI",
+        formatINR(results.A.prePossessionEmi),
+        formatINR(results.B.prePossessionEmi),
+        results.A.prePossessionEmi,
+        results.B.prePossessionEmi,
+        "lower",
+      ),
     );
   }
 
   return rows;
 }
 
-function row(section: string, metric: string, a: string, b: string, aRaw: number | string, bRaw: number | string, tone: RowTone): CompareRow {
+function row(
+  section: string,
+  metric: string,
+  a: string,
+  b: string,
+  aRaw: number | string,
+  bRaw: number | string,
+  tone: RowTone,
+): CompareRow {
   return { section, metric, a, b, aRaw, bRaw, tone };
 }
 
@@ -515,7 +997,9 @@ function stagePayment(home: Home, index: number) {
 
 function prePossessionPrincipal(home: Home) {
   if (home.propertyType !== "construction") return loanAmount(home);
-  const stagedPrincipal = home.builderStages.filter((stage) => stage.month <= home.possessionMonth).reduce((sum, stage) => sum + (stage.bankPays || 0), 0);
+  const stagedPrincipal = home.builderStages
+    .filter((stage) => stage.month <= home.possessionMonth)
+    .reduce((sum, stage) => sum + (stage.bankPays || 0), 0);
   return stagedPrincipal || loanAmount(home);
 }
 

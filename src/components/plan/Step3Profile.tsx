@@ -68,8 +68,7 @@ const STABILITY_OPTIONS: Array<{ key: IncomeStability; emoji: string; label: str
 const UPCOMING_MONTHS = Array.from({ length: 24 }, (_, i) => i + 1);
 
 export function Step3Profile({ value, onChange }: Props) {
-  const set = <K extends keyof Profile>(k: K, v: Profile[K]) =>
-    onChange({ ...value, [k]: v });
+  const set = <K extends keyof Profile>(k: K, v: Profile[K]) => onChange({ ...value, [k]: v });
 
   React.useEffect(() => {
     if (!value.emergencyFundPref) {
@@ -241,15 +240,11 @@ export function Step3Profile({ value, onChange }: Props) {
                 className={cn(
                   "flex flex-col rounded-xl border-2 p-4 text-left transition",
                   "hover:border-primary/50",
-                  selected
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-background",
+                  selected ? "border-primary bg-primary/5" : "border-border bg-background",
                 )}
               >
                 <span className="text-2xl">{opt.emoji}</span>
-                <span className="mt-2 text-base font-semibold text-foreground">
-                  {opt.title}
-                </span>
+                <span className="mt-2 text-base font-semibold text-foreground">{opt.title}</span>
                 <span className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                   {opt.desc}
                 </span>
@@ -342,14 +337,7 @@ function ToggleRow({
   );
 }
 
-function WarningCard({
-  icon,
-  text,
-}: {
-  tone: "amber";
-  icon: React.ReactNode;
-  text: string;
-}) {
+function WarningCard({ icon, text }: { tone: "amber"; icon: React.ReactNode; text: string }) {
   return (
     <div className="mt-3 flex items-start gap-2 rounded-xl border border-warning/40 bg-warning/15 px-4 py-3 text-sm text-foreground">
       <span className="mt-0.5 shrink-0 text-warning">{icon}</span>

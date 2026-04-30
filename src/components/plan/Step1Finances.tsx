@@ -43,18 +43,55 @@ const EXPENSE_CARDS: Array<{
   label: string;
   helper: string;
 }> = [
-  { key: "housing", emoji: "🏠", label: "Rent or current housing cost", helper: "rent, maintenance, current housing cost" },
-  { key: "family", emoji: "🧾", label: "Household groceries and utilities", helper: "groceries, electricity, water, regular utilities" },
-  { key: "health", emoji: "🏥", label: "Medical / health costs", helper: "medical bills and recurring health costs" },
-  { key: "daily", emoji: "🚌", label: "Transportation", helper: "fuel, commute, vehicle running costs" },
-  { key: "investments", emoji: "🎓", label: "School / education fees", helper: "school, education, classes, learning costs" },
-  { key: "discretionary", emoji: "🎉", label: "Entertainment, dining and other living expenses", helper: "dining, entertainment, shopping, other regular living costs" },
+  {
+    key: "housing",
+    emoji: "🏠",
+    label: "Rent or current housing cost",
+    helper: "rent, maintenance, current housing cost",
+  },
+  {
+    key: "family",
+    emoji: "🧾",
+    label: "Household groceries and utilities",
+    helper: "groceries, electricity, water, regular utilities",
+  },
+  {
+    key: "health",
+    emoji: "🏥",
+    label: "Medical / health costs",
+    helper: "medical bills and recurring health costs",
+  },
+  {
+    key: "daily",
+    emoji: "🚌",
+    label: "Transportation",
+    helper: "fuel, commute, vehicle running costs",
+  },
+  {
+    key: "investments",
+    emoji: "🎓",
+    label: "School / education fees",
+    helper: "school, education, classes, learning costs",
+  },
+  {
+    key: "discretionary",
+    emoji: "🎉",
+    label: "Entertainment, dining and other living expenses",
+    helper: "dining, entertainment, shopping, other regular living costs",
+  },
 ];
 
-export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpgradeRequired }: Props) {
+export function Step1Finances({
+  value,
+  onChange,
+  canUseProFeatures = true,
+  onUpgradeRequired,
+}: Props) {
   const [files, setFiles] = React.useState<File[]>([]);
   const [analysing, setAnalysing] = React.useState(false);
-  const [message, setMessage] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [message, setMessage] = React.useState<{ type: "success" | "error"; text: string } | null>(
+    null,
+  );
   const [aiFields, setAiFields] = React.useState<Set<string>>(new Set());
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -64,14 +101,19 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
 
   const validateAndAddFiles = (incoming: FileList | File[]) => {
     if (!canUseProFeatures) {
-      onUpgradeRequired?.("AI statement analysis is a Pro feature. Upgrade to unlock instant auto-fill.");
+      onUpgradeRequired?.(
+        "AI statement analysis is a Pro feature. Upgrade to unlock instant auto-fill.",
+      );
       return;
     }
     setMessage(null);
     const selected = Array.from(incoming);
     const valid: File[] = [];
     for (const file of selected) {
-      const ok = file.type === "application/pdf" || file.type.includes("csv") || /\.(pdf|csv)$/i.test(file.name);
+      const ok =
+        file.type === "application/pdf" ||
+        file.type.includes("csv") ||
+        /\.(pdf|csv)$/i.test(file.name);
       if (!ok) {
         setMessage({ type: "error", text: "Please upload a PDF or CSV file only." });
         continue;
@@ -106,18 +148,20 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
         discretionary: Math.round(extracted.discretionary),
       },
     });
-    setAiFields(new Set([
-      "income.primarySalary",
-      "income.additionalIncome",
-      "income.familyContribution",
-      "commitments.emis",
-      "commitments.insurance",
-      "expenses.housing",
-      "expenses.family",
-      "expenses.health",
-      "expenses.daily",
-      "expenses.discretionary",
-    ]));
+    setAiFields(
+      new Set([
+        "income.primarySalary",
+        "income.additionalIncome",
+        "income.familyContribution",
+        "commitments.emis",
+        "commitments.insurance",
+        "expenses.housing",
+        "expenses.family",
+        "expenses.health",
+        "expenses.daily",
+        "expenses.discretionary",
+      ]),
+    );
     setMessage({
       type: "success",
       text: `✅ AI has filled in your details from ${months} months of statements. Please review and edit anything that looks wrong. ✅ File deleted from our servers after analysis.`,
@@ -126,7 +170,9 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
 
   const handleAnalyze = async () => {
     if (!canUseProFeatures) {
-      onUpgradeRequired?.("AI statement analysis is a Pro feature. Upgrade to unlock instant auto-fill.");
+      onUpgradeRequired?.(
+        "AI statement analysis is a Pro feature. Upgrade to unlock instant auto-fill.",
+      );
       return;
     }
     if (files.length === 0) return;
@@ -143,8 +189,16 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
         headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
-      const data = await res.json() as { values?: ExtractedStatementValues; months?: number; error?: string };
-      if (!res.ok || !data.values) throw new Error(data.error || "We couldn't read this file automatically. Please fill in the details below manually.");
+      const data = (await res.json()) as {
+        values?: ExtractedStatementValues;
+        months?: number;
+        error?: string;
+      };
+      if (!res.ok || !data.values)
+        throw new Error(
+          data.error ||
+            "We couldn't read this file automatically. Please fill in the details below manually.",
+        );
       applyExtractedValues(data.values, data.months ?? 3);
       setFiles([]);
       if (inputRef.current) inputRef.current.value = "";
@@ -169,11 +223,14 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
       <section className="rounded-2xl border border-border bg-card p-5 shadow-card sm:p-6">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-bold tracking-tight text-foreground">Let AI fill this for you</h2>
+            <h2 className="text-xl font-bold tracking-tight text-foreground">
+              Let AI fill this for you
+            </h2>
             <Badge variant="secondary">{proBadgeText()}</Badge>
           </div>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Upload your last 3-6 months of statements. Our AI will auto-detect your income, living expenses, and EMIs.
+            Upload your last 3-6 months of statements. Our AI will auto-detect your income, living
+            expenses, and EMIs.
           </p>
         </div>
         <input
@@ -198,7 +255,9 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
           <span className="mt-3 text-sm font-semibold text-foreground">
             📄 Drop your statement here or click to upload
           </span>
-          <span className="mt-1 text-xs text-muted-foreground">PDF or CSV · up to 6 files · 10MB each</span>
+          <span className="mt-1 text-xs text-muted-foreground">
+            PDF or CSV · up to 6 files · 10MB each
+          </span>
         </button>
         {files.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -217,23 +276,34 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
           </div>
         )}
         <p className="mt-4 text-xs text-muted-foreground">
-          🔒 Your files are analysed instantly and permanently deleted. We never store uploaded statements.
+          🔒 Your files are analysed instantly and permanently deleted. We never store uploaded
+          statements.
         </p>
         {message && (
-          <div className={cn(
-            "mt-4 rounded-xl border px-4 py-3 text-sm",
-            message.type === "success"
-              ? "border-success/25 bg-success-soft text-success-soft-foreground"
-              : "border-destructive/25 bg-danger-soft text-danger-soft-foreground",
-          )}>
+          <div
+            className={cn(
+              "mt-4 rounded-xl border px-4 py-3 text-sm",
+              message.type === "success"
+                ? "border-success/25 bg-success-soft text-success-soft-foreground"
+                : "border-destructive/25 bg-danger-soft text-danger-soft-foreground",
+            )}
+          >
             {message.text}
           </div>
         )}
-        <Button className="mt-5 w-full sm:w-auto" onClick={handleAnalyze} disabled={files.length === 0 || analysing}>
+        <Button
+          className="mt-5 w-full sm:w-auto"
+          onClick={handleAnalyze}
+          disabled={files.length === 0 || analysing}
+        >
           {analysing ? <Loader2 className="h-4 w-4 animate-spin" /> : "✨"}
           {analysing ? "AI is reading your statement..." : "Analyse with AI"}
         </Button>
-        {analysing && <div className="mt-4 h-2 overflow-hidden rounded-full bg-primary/15"><div className="h-full w-2/3 animate-pulse rounded-full bg-primary" /></div>}
+        {analysing && (
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-primary/15">
+            <div className="h-full w-2/3 animate-pulse rounded-full bg-primary" />
+          </div>
+        )}
       </section>
 
       <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
@@ -268,7 +338,11 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
               placeholder="freelance, rent, other"
             />
           </Field>
-          <Field label="Family Contribution" className="sm:col-span-2" ai={aiFields.has("income.familyContribution")}>
+          <Field
+            label="Family Contribution"
+            className="sm:col-span-2"
+            ai={aiFields.has("income.familyContribution")}
+          >
             <CurrencyInput
               value={value.income.familyContribution}
               onValueChange={(n) => set("income", { familyContribution: n })}
@@ -303,7 +377,6 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
               onValueChange={(n) => set("commitments", { emis: n })}
             />
           </Field>
-
         </div>
       </section>
 
@@ -311,7 +384,7 @@ export function Step1Finances({ value, onChange, canUseProFeatures = true, onUpg
       <section>
         <h2 className="text-base font-semibold text-foreground">Monthly Expenses</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-Enter only regular living costs. Investments are captured separately in the next step.
+          Enter only regular living costs. Investments are captured separately in the next step.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {EXPENSE_CARDS.map((c) => (
@@ -331,7 +404,9 @@ Enter only regular living costs. Investments are captured separately in the next
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     {c.label}
-                    {aiFields.has(`expenses.${c.key}`) ? <Badge variant="secondary">AI</Badge> : null}
+                    {aiFields.has(`expenses.${c.key}`) ? (
+                      <Badge variant="secondary">AI</Badge>
+                    ) : null}
                   </div>
                   <div className="text-xs text-muted-foreground">{c.helper}</div>
                 </div>
@@ -339,7 +414,9 @@ Enter only regular living costs. Investments are captured separately in the next
               <div className="mt-3">
                 <CurrencyInput
                   value={value.expenses[c.key]}
-                  onValueChange={(n) => set("expenses", { [c.key]: n } as Partial<Finances["expenses"]>)}
+                  onValueChange={(n) =>
+                    set("expenses", { [c.key]: n } as Partial<Finances["expenses"]>)
+                  }
                 />
               </div>
             </div>
@@ -358,10 +435,7 @@ Enter only regular living costs. Investments are captured separately in the next
           <Row
             label="Current Monthly Surplus"
             value={formatINR(net)}
-            valueClass={cn(
-              "text-lg font-bold",
-              net >= 0 ? "text-success" : "text-destructive",
-            )}
+            valueClass={cn("text-lg font-bold", net >= 0 ? "text-success" : "text-destructive")}
             labelClass="font-semibold text-foreground"
           />
         </dl>
@@ -385,11 +459,7 @@ function Field({
 }) {
   return (
     <div
-      className={cn(
-        "space-y-1.5 rounded-lg",
-        ai && "border-l-4 border-l-primary pl-3",
-        className,
-      )}
+      className={cn("space-y-1.5 rounded-lg", ai && "border-l-4 border-l-primary pl-3", className)}
     >
       <Label className="inline-flex items-center gap-2 text-sm">
         {label}

@@ -114,11 +114,7 @@ export function totalCommitments(f: Finances): number {
 export function totalExpenses(f: Finances): number {
   const e = f.expenses;
   return (
-    (e.housing || 0) +
-    (e.family || 0) +
-    (e.health || 0) +
-    (e.daily || 0) +
-    (e.discretionary || 0)
+    (e.housing || 0) + (e.family || 0) + (e.health || 0) + (e.daily || 0) + (e.discretionary || 0)
   );
 }
 
@@ -184,30 +180,47 @@ export function isLumpSumInvestment(type: InvestmentType): boolean {
 }
 
 export function estimateInvestmentCurrentValue(investment: CurrentInvestment): number {
-  if (isLumpSumInvestment(investment.type)) return futureValueAmount(investment.amount, investment.assumedReturn, investment.monthsRunning);
+  if (isLumpSumInvestment(investment.type))
+    return futureValueAmount(investment.amount, investment.assumedReturn, investment.monthsRunning);
   return futureValueSeries(investment.amount, investment.assumedReturn, investment.monthsRunning);
 }
 
-export function projectInvestmentValue(investment: CurrentInvestment, monthsToTarget: number): number {
+export function projectInvestmentValue(
+  investment: CurrentInvestment,
+  monthsToTarget: number,
+): number {
   const current = estimateInvestmentCurrentValue(investment);
   const months = Math.max(0, Math.round(monthsToTarget));
   const carried = futureValueAmount(current, investment.assumedReturn, months);
   if (!investment.continuing || isLumpSumInvestment(investment.type)) return carried;
-  return carried + futureValueSeries(investment.amount, investment.assumedReturn, Math.min(months, investment.monthsRemaining));
+  return (
+    carried +
+    futureValueSeries(
+      investment.amount,
+      investment.assumedReturn,
+      Math.min(months, investment.monthsRemaining),
+    )
+  );
 }
 
 export function summarizeInvestments(investments: CurrentInvestment[], monthsToTarget: number) {
   return {
-    monthlyCommitment: investments.filter((item) => !isLumpSumInvestment(item.type) && item.continuing).reduce((sum, item) => sum + (item.amount || 0), 0),
+    monthlyCommitment: investments
+      .filter((item) => !isLumpSumInvestment(item.type) && item.continuing)
+      .reduce((sum, item) => sum + (item.amount || 0), 0),
     currentCorpus: investments.reduce((sum, item) => sum + estimateInvestmentCurrentValue(item), 0),
-    projectedCorpus: investments.reduce((sum, item) => sum + projectInvestmentValue(item, monthsToTarget), 0),
+    projectedCorpus: investments.reduce(
+      (sum, item) => sum + projectInvestmentValue(item, monthsToTarget),
+      0,
+    ),
   };
 }
 
 function futureValueSeries(monthly: number, annualRate: number, months: number) {
   let value = 0;
   const r = annualRate / 12 / 100;
-  for (let month = 1; month <= Math.max(0, Math.round(months)); month += 1) value = (value + monthly) * (1 + r);
+  for (let month = 1; month <= Math.max(0, Math.round(months)); month += 1)
+    value = (value + monthly) * (1 + r);
   return value;
 }
 
@@ -313,7 +326,8 @@ export function calculateAffordabilityPlan(
     0,
     (home.downPayment || 0) - (profile.hasUpcomingExpense ? profile.upcomingExpenseAmount || 0 : 0),
   );
-  const emergencyCoverageRatio = emergencyFundNeeded > 0 ? availableSavings / emergencyFundNeeded : 2;
+  const emergencyCoverageRatio =
+    emergencyFundNeeded > 0 ? availableSavings / emergencyFundNeeded : 2;
   const emergencyStatus: EmergencyFundStatus =
     emergencyCoverageRatio >= 1
       ? "Protected"
