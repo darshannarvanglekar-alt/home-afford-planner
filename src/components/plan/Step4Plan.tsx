@@ -777,9 +777,17 @@ function CorpusBuilder({
 
   const updateMarketRates = (rate: number) => {
     setAllocations(
-      allocations.map((item) => (item.id === "monthlyInvestment" ? { ...item, rate } : item)),
+      allocations.map((item) =>
+        MARKET_LINKED_ROUTES.includes(item.id) ? { ...item, rate } : item,
+      ),
     );
   };
+
+  const hasBlended = selected.has("blended");
+  const blendedAlone = hasBlended && allocations.length === 1;
+  const hasMultipleRoutes = allocations.length > 1;
+  const marketRateChip =
+    allocations.find((item) => MARKET_LINKED_ROUTES.includes(item.id))?.rate ?? 10;
 
   return (
     <>
