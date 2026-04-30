@@ -567,9 +567,15 @@ function SmartSuggestionsPanel({
             </Button>
           </div>
         ) : suggestions.length === 0 ? (
-          <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">
-            Your plan is already well-optimised. Small tweaks are shown below in case you want to
-            explore further.
+          <div className="rounded-xl border border-success/25 bg-success-soft/55 p-5 text-center">
+            <Trophy className="mx-auto h-8 w-8 text-success" />
+            <h3 className="mt-2 text-base font-extrabold text-foreground">
+              Your plan looks well-optimised
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Based on your numbers, your current plan is already on a strong path. Here are a few
+              small tweaks to explore if you want to go further.
+            </p>
           </div>
         ) : (
           suggestions.map((suggestion, index) => (
