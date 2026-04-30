@@ -18,6 +18,9 @@ import {
   WalletCards,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { SaveScenarioButton } from "@/components/scenarios/SaveScenarioButton";
+import { useAuth } from "@/lib/auth";
+import { listScenarios } from "@/lib/scenarios";
 import {
   CartesianGrid,
   Line,
