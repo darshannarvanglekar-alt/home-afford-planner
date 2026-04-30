@@ -30,6 +30,7 @@ interface Props {
   profile: Profile;
   corpus?: SavedScenario["corpus"];
   loanRelief?: SavedScenario["loanRelief"];
+  safetyAllocation?: number;
   // when set, indicates the user originally loaded from this scenario
   loadedFromId?: string;
   loadedFromName?: string;
@@ -47,6 +48,7 @@ export function SaveScenarioButton({
   profile,
   corpus,
   loanRelief,
+  safetyAllocation,
   loadedFromId,
   loadedFromName,
   defaultName,
