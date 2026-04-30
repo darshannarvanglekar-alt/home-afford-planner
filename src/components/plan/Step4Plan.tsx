@@ -849,6 +849,17 @@ function CorpusBuilder({
           </div>
         </div>
 
+        {blendedAlone && (
+          <div className="mt-4 rounded-2xl border border-warning/25 bg-warning-soft p-4 text-sm font-medium text-warning-soft-foreground">
+            Blended Approach combines two or more routes. Please select at least one additional route card to combine with it.
+          </div>
+        )}
+        {hasBlended && hasMultipleRoutes && (
+          <div className="mt-4 rounded-2xl border border-primary/20 bg-primary-soft p-4 text-sm font-medium text-primary-soft-foreground">
+            You've selected multiple routes — this is your blended approach. Adjust amounts for each route below.
+          </div>
+        )}
+
         <div className="sticky top-24 z-10 mt-6 rounded-2xl border border-border bg-background/95 p-4 shadow-soft backdrop-blur">
           <div className="flex flex-col gap-1 text-sm font-semibold sm:flex-row sm:items-center sm:justify-between">
             <span>Total monthly allocation: {formatINR(totalMonthly)}</span>
@@ -873,7 +884,7 @@ function CorpusBuilder({
           </div>
           <ScenarioChips
             rates={[8, 10, 12]}
-            selected={allocations.find((item) => item.id === "monthlyInvestment")?.rate ?? 10}
+            selected={marketRateChip}
             onSelect={updateMarketRates}
           />
           <div className="space-y-3">
