@@ -306,7 +306,7 @@ function PlanWizardPage() {
               {validationError ? <p className="text-sm font-medium text-destructive">{validationError}</p> : null}
               <Button
                 size="lg"
-                className={step === 3 ? "h-12 px-8 text-base font-semibold" : undefined}
+                className={step === 4 ? "h-12 px-8 text-base font-semibold" : undefined}
                 onClick={() => {
                   if (!validateStep()) return;
                   step === 4 ? calculatePlan() : goToStep(step + 1);

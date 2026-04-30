@@ -146,7 +146,7 @@ function DashboardPage() {
     navigate({ to: "/plan/new", search: { step: 1, planId: undefined } });
   };
 
-  const openPlan = (planId: string) => navigate({ to: "/plan/new", search: { step: 4, planId } });
+  const openPlan = (planId: string) => navigate({ to: "/plan/new", search: { step: 5, planId } });
 
   const saveRename = async (planId: string) => {
     const nextName = renameValue.trim() || "Untitled plan";
