@@ -26,13 +26,16 @@ interface Props {
   finances: Finances;
   home: Home;
   profile: Profile;
+  onFinancesChange?: (finances: Finances) => void;
+  onHomeChange?: (home: Home) => void;
+  onProfileChange?: (profile: Profile) => void;
   planName?: string;
   onPlanNameChange?: (name: string) => void;
   canUseProFeatures?: boolean;
   onUpgradeRequired?: (message: string) => void;
 }
 
-export function Step4Plan({ finances, home, profile, planName = "", onPlanNameChange, canUseProFeatures = true, onUpgradeRequired }: Props) {
+export function Step4Plan({ finances, home, profile, onFinancesChange, onHomeChange, onProfileChange, planName = "", onPlanNameChange, canUseProFeatures = true, onUpgradeRequired }: Props) {
   const [open, setOpen] = React.useState(true);
   const [editingName, setEditingName] = React.useState(false);
   const [draftName, setDraftName] = React.useState(planName);
@@ -145,7 +148,7 @@ export function Step4Plan({ finances, home, profile, planName = "", onPlanNameCh
         </Link>
       </Button>
 
-      <SmartSuggestionsPanel finances={finances} home={home} profile={profile} canUseProFeatures={canUseProFeatures} onUpgradeRequired={onUpgradeRequired} />
+      <SmartSuggestionsPanel finances={finances} home={home} profile={profile} onFinancesChange={onFinancesChange} onHomeChange={onHomeChange} onProfileChange={onProfileChange} canUseProFeatures={canUseProFeatures} onUpgradeRequired={onUpgradeRequired} />
 
       <CorpusBuilder finances={finances} home={home} planSurplus={plan.surplusAfterEmi} onSafetyAllocation={setSafetyAllocation} />
 
