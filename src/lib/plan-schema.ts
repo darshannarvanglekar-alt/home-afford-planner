@@ -2,6 +2,88 @@ import { z } from "zod";
 
 const num = z.number().min(0).default(0);
 
+// ============================================================
+// Payment frequency support (Change 8)
+// ============================================================
+export const PAYMENT_FREQUENCIES = ["monthly", "quarterly", "half_yearly", "annually"] as const;
+export type PaymentFrequency = (typeof PAYMENT_FREQUENCIES)[number];
+
+export const paymentFrequencyLabels: Record<PaymentFrequency, string> = {
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+  half_yearly: "Half-yearly",
+  annually: "Annually",
+};
+
+const FREQ_MONTHS: Record<PaymentFrequency, number> = {
+  monthly: 1,
+  quarterly: 3,
+  half_yearly: 6,
+  annually: 12,
+};
+
+export function monthlyEquivalent(amount: number, frequency: PaymentFrequency): number {
+  const safe = Number.isFinite(amount) ? amount : 0;
+  return safe / FREQ_MONTHS[frequency];
+}
+
+// An amount that may be paid at any frequency. We always store the original
+// amount + frequency together so display + calculation are consistent.
+export const amountWithFrequencySchema = z
+  .union([
+    z.number(),
+    z.object({
+      amount: num,
+      frequency: z.enum(PAYMENT_FREQUENCIES).default("monthly"),
+    }),
+  ])
+  .transform((v) => {
+    if (typeof v === "number") return { amount: v, frequency: "monthly" as PaymentFrequency };
+    return { amount: v.amount, frequency: v.frequency };
+  });
+export type AmountWithFrequency = { amount: number; frequency: PaymentFrequency };
+
+export function awfMonthly(value: AmountWithFrequency | number | undefined): number {
+  if (!value) return 0;
+  if (typeof value === "number") return value;
+  return monthlyEquivalent(value.amount, value.frequency);
+}
+
+// ============================================================
+// Existing EMIs as a list with end dates (Change 5)
+// ============================================================
+// endDate stored as "YYYY-MM" (first day of month considered active that month;
+// EMI is "active" while month index ≤ endMonthIndex measured from "today").
+export const existingEmiSchema = z.object({
+  id: z.string(),
+  label: z.string().default(""),
+  amount: num,
+  // ISO month string YYYY-MM
+  endDate: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+});
+export type ExistingEmi = z.infer<typeof existingEmiSchema>;
+
+function todayYM(): { year: number; month: number } {
+  const d = new Date();
+  return { year: d.getFullYear(), month: d.getMonth() + 1 };
+}
+
+export function monthsUntilEndDate(endDate: string | undefined): number | null {
+  if (!endDate) return null; // no end date = treat as ongoing
+  const m = endDate.match(/^(\d{4})-(\d{2})$/);
+  if (!m) return null;
+  const ey = Number(m[1]);
+  const em = Number(m[2]);
+  const t = todayYM();
+  return (ey - t.year) * 12 + (em - t.month);
+}
+
+export function isEmiActiveAtOffset(emi: ExistingEmi, monthOffset: number): boolean {
+  const remaining = monthsUntilEndDate(emi.endDate);
+  if (remaining === null) return true; // ongoing
+  return monthOffset <= remaining;
+}
+
 export const PROPERTY_TYPES = ["ready", "construction", "plot"] as const;
 export type PropertyType = (typeof PROPERTY_TYPES)[number];
 
