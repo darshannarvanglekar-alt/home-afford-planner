@@ -372,64 +372,86 @@ export function Step1Finances({
         </div>
       </section>
 
-      {/* COMMITMENTS */}
+      {/* COMMITMENTS — structured EMI list with end dates (Change 5) */}
       <section className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
-        <h2 className="text-base font-semibold text-foreground">Existing Monthly Commitments</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Current EMIs total"
-            helper="Total of all existing loan EMIs you pay"
-            ai={aiFields.has("commitments.emis")}
-          >
-            <CurrencyInput
-              value={value.commitments.emis}
-              onValueChange={(n) => set("commitments", { emis: n })}
-            />
-          </Field>
-        </div>
+        <h2 className="text-base font-semibold text-foreground">Existing Loan EMIs</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Add each loan EMI separately. Including the end date helps us reflect the windfall when an
+          EMI closes.
+        </p>
+        <EmiList value={value} onChange={onChange} />
       </section>
 
       {/* EXPENSES */}
       <section>
         <h2 className="text-base font-semibold text-foreground">Monthly Expenses</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Enter only regular living costs. Investments are captured separately in the next step.
+          Enter your typical amount and how often you pay. Investments are captured separately in the
+          next step.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {EXPENSE_CARDS.map((c) => (
-            <div
-              key={c.key}
-              className={cn(
-                "rounded-xl border bg-card p-4 shadow-soft",
-                aiFields.has(`expenses.${c.key}`)
-                  ? "border-primary/30 border-l-4 border-l-primary"
-                  : "border-border",
-              )}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-xl">
-                  {c.emoji}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    {c.label}
-                    {aiFields.has(`expenses.${c.key}`) ? (
-                      <Badge variant="secondary">AI</Badge>
-                    ) : null}
+          {EXPENSE_CARDS.map((c) => {
+            const current: AmountWithFrequency = value.expenses[c.key] ?? {
+              amount: 0,
+              frequency: "monthly",
+            };
+            return (
+              <div
+                key={c.key}
+                className={cn(
+                  "rounded-xl border bg-card p-4 shadow-soft",
+                  aiFields.has(`expenses.${c.key}`)
+                    ? "border-primary/30 border-l-4 border-l-primary"
+                    : "border-border",
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-xl">
+                    {c.emoji}
                   </div>
-                  <div className="text-xs text-muted-foreground">{c.helper}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      {c.label}
+                      {aiFields.has(`expenses.${c.key}`) ? (
+                        <Badge variant="secondary">AI</Badge>
+                      ) : null}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{c.helper}</div>
+                  </div>
                 </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <CurrencyInput
+                    value={current.amount}
+                    onValueChange={(n) =>
+                      set("expenses", {
+                        [c.key]: { amount: n, frequency: current.frequency },
+                      } as Partial<Finances["expenses"]>)
+                    }
+                  />
+                  <FrequencySelect
+                    value={current.frequency}
+                    onChange={(f) =>
+                      set("expenses", {
+                        [c.key]: { amount: current.amount, frequency: f },
+                      } as Partial<Finances["expenses"]>)
+                    }
+                    className="min-h-11 w-full sm:w-[140px]"
+                  />
+                </div>
+                {current.frequency !== "monthly" && current.amount > 0 ? (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Monthly equivalent: {formatINR(monthlyEquivalent(current.amount, current.frequency))}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      💡 Paying this monthly makes it easier to track your surplus and plan
+                      investments.
+                    </p>
+                  </div>
+                ) : null}
               </div>
-              <div className="mt-3">
-                <CurrencyInput
-                  value={value.expenses[c.key]}
-                  onValueChange={(n) =>
-                    set("expenses", { [c.key]: n } as Partial<Finances["expenses"]>)
-                  }
-                />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -439,7 +461,7 @@ export function Step1Finances({
         <dl className="mt-4 space-y-2.5 text-sm">
           <Row label="Total Income" value={formatINR(income)} />
           <Row label="Monthly Expenses" value={formatINR(livingExpenses)} />
-          <Row label="Existing Loan EMIs" value={formatINR(existingEmis)} />
+          <Row label="Existing Loan EMIs (active today)" value={formatINR(existingEmis)} />
           <div className="my-2 h-px bg-border" />
           <Row
             label="Current Monthly Surplus"
@@ -447,12 +469,10 @@ export function Step1Finances({
             valueClass={cn("text-lg font-bold", net >= 0 ? "text-success" : "text-destructive")}
             labelClass="font-semibold text-foreground"
           />
+          <p className="text-xs text-muted-foreground">
+            Based on monthly equivalents of all your expenses.
+          </p>
         </dl>
-      </section>
-    </div>
-  );
-}
-
 function Field({
   label,
   helper,
