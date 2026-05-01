@@ -172,7 +172,15 @@ function buildUserPrompt(profile: z.infer<typeof profileSchema>) {
 - Dependents: ${profile.dependents}
 - Elderly parents: ${profile.elderlyParents ? "yes" : "no"}
 - Property type: ${profile.propertyType}
-- Discretionary spend: ₹${Math.round(profile.discretionary)}`;
+- Discretionary spend: ₹${Math.round(profile.discretionary)}
+- EMIs ending during build-up: ${(profile.emiEndEvents ?? []).map((e) => `${e.label} ₹${Math.round(e.amount)}/mo ends in month ${e.endsInMonth}`).join("; ") || "none"}
+- Insurance maturities arriving during build-up: ${(profile.insuranceMaturities ?? []).map((m) => `${m.subtype} ₹${Math.round(m.amount)} in month ${m.inMonth}`).join("; ") || "none"}
+- Annual-payment monthly equivalent: ₹${Math.round(profile.annualPaymentMonthlyEquivalent ?? 0)}
+
+Additional suggestion areas to cover when relevant:
+- If an EMI ends during the build-up window, suggest redirecting that ₹X/month into corpus from month N+1 and quantify how many months earlier the gap closes.
+- If an insurance policy matures before possession, reference the maturity arrival and how it reduces the corpus gap.
+- If annual-payment burden is significant, suggest keeping a buffer for those months when surplus drops.`;
 }
 
 async function callAiWithRetry(apiKey: string, profile: z.infer<typeof profileSchema>) {
