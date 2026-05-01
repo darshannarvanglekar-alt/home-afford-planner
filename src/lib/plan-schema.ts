@@ -433,23 +433,47 @@ export function insuranceMaturityEvents(
 }
 
 export function estimateInvestmentCurrentValue(investment: CurrentInvestment): number {
+  // Pure-protection insurance contributes nothing to corpus
+  if (investment.type === "protection_plan" && insuranceIsPureProtection(investment.insuranceSubtype))
+    return 0;
+  if (insuranceIsAnnuity(investment.insuranceSubtype)) return 0;
   if (isLumpSumInvestment(investment.type))
     return futureValueAmount(investment.amount, investment.assumedReturn, investment.monthsRunning);
-  return futureValueSeries(investment.amount, investment.assumedReturn, investment.monthsRunning);
+  const monthly = investmentMonthlyContribution(investment);
+  return futureValueSeries(monthly, investment.assumedReturn, investment.monthsRunning);
 }
 
 export function projectInvestmentValue(
   investment: CurrentInvestment,
   monthsToTarget: number,
 ): number {
+  // Pure-protection insurance never adds to corpus
+  if (investment.type === "protection_plan" && insuranceIsPureProtection(investment.insuranceSubtype))
+    return 0;
+  if (insuranceIsAnnuity(investment.insuranceSubtype)) return 0;
+
+  // Insurance with returns: maturity value lands on its maturity date
+  if (investment.type === "protection_plan" && insuranceHasReturns(investment.insuranceSubtype)) {
+    const m = monthsUntilEndDate(investment.maturityDate);
+    if (m === null) return 0;
+    if (m > monthsToTarget) {
+      // Discount-back to projected target date is irrelevant; if maturity is
+      // beyond possession, only the value built up to possession at the assumed
+      // return is counted (treat as a frozen growth instrument).
+      return futureValueAmount(investment.maturityValue ?? 0, 0, 0);
+    }
+    return investment.maturityValue ?? 0;
+  }
+
   const current = estimateInvestmentCurrentValue(investment);
   const months = Math.max(0, Math.round(monthsToTarget));
   const carried = futureValueAmount(current, investment.assumedReturn, months);
   if (!investment.continuing || isLumpSumInvestment(investment.type)) return carried;
+  const monthly = investmentMonthlyContribution(investment);
   return (
     carried +
     futureValueSeries(
-      investment.amount,
+      monthly,
       investment.assumedReturn,
       Math.min(months, investment.monthsRemaining),
     )
@@ -460,7 +484,7 @@ export function summarizeInvestments(investments: CurrentInvestment[], monthsToT
   return {
     monthlyCommitment: investments
       .filter((item) => !isLumpSumInvestment(item.type) && item.continuing)
-      .reduce((sum, item) => sum + (item.amount || 0), 0),
+      .reduce((sum, item) => sum + investmentMonthlyContribution(item), 0),
     currentCorpus: investments.reduce((sum, item) => sum + estimateInvestmentCurrentValue(item), 0),
     projectedCorpus: investments.reduce(
       (sum, item) => sum + projectInvestmentValue(item, monthsToTarget),
@@ -468,7 +492,6 @@ export function summarizeInvestments(investments: CurrentInvestment[], monthsToT
     ),
   };
 }
-
 function futureValueSeries(monthly: number, annualRate: number, months: number) {
   let value = 0;
   const r = annualRate / 12 / 100;
