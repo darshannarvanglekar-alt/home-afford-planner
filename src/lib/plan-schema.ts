@@ -319,20 +319,117 @@ export const investmentDefaultRates: Record<InvestmentType, number> = {
   other: 8,
 };
 
+// ============================================================
+// Insurance subtypes (Change 6) — only relevant when type === "protection_plan"
+// ============================================================
+export const INSURANCE_SUBTYPES = [
+  "term",
+  "endowment",
+  "market_linked",
+  "child_education",
+  "medical",
+  "personal_accident",
+  "pension_annuity",
+] as const;
+export type InsuranceSubtype = (typeof INSURANCE_SUBTYPES)[number];
+
+export const insuranceSubtypeLabels: Record<InsuranceSubtype, string> = {
+  term: "Term insurance — pure protection, no returns",
+  endowment: "Endowment / savings plan — returns at maturity",
+  market_linked: "Market-linked insurance plan — variable returns",
+  child_education: "Child / education insurance — returns at target date",
+  medical: "Medical / health insurance — pure protection, no returns",
+  personal_accident: "Personal accident cover — pure protection, no returns",
+  pension_annuity: "Pension / annuity plan — future monthly income",
+};
+
+export const insuranceDefaultReturns: Partial<Record<InsuranceSubtype, number>> = {
+  endowment: 5,
+  market_linked: 8,
+  child_education: 7,
+};
+
+export function insuranceHasReturns(subtype?: InsuranceSubtype): boolean {
+  return (
+    subtype === "endowment" ||
+    subtype === "market_linked" ||
+    subtype === "child_education"
+  );
+}
+export function insuranceIsAnnuity(subtype?: InsuranceSubtype): boolean {
+  return subtype === "pension_annuity";
+}
+export function insuranceIsPureProtection(subtype?: InsuranceSubtype): boolean {
+  return (
+    subtype === "term" || subtype === "medical" || subtype === "personal_accident"
+  );
+}
+
 export const investmentSchema = z.object({
   id: z.string(),
   type: z.enum(INVESTMENT_TYPES).default("monthly_market"),
   amount: num,
+  // Frequency for recurring contributions / premiums (Change 8)
+  frequency: z.enum(PAYMENT_FREQUENCIES).default("monthly"),
   assumedReturn: z.number().min(0).max(30).default(10),
   monthsRunning: z.number().int().min(0).max(600).default(0),
   continuing: z.boolean().default(true),
   monthsRemaining: z.number().int().min(0).max(600).default(12),
+  // Insurance-specific fields (Change 6)
+  insuranceSubtype: z.enum(INSURANCE_SUBTYPES).optional(),
+  policyEndDate: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  maturityValue: num.optional(),
+  maturityDate: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  annuityMonthlyIncome: num.optional(),
+  annuityStartDate: z.string().regex(/^\d{4}-\d{2}$/).optional(),
 });
 export type CurrentInvestment = z.infer<typeof investmentSchema>;
 export const investmentsSchema = z.array(investmentSchema).max(10).default([]);
 
 export function isLumpSumInvestment(type: InvestmentType): boolean {
   return type === "fixed_deposit";
+}
+
+// Monthly equivalent of a recurring contribution (uses frequency).
+export function investmentMonthlyContribution(inv: CurrentInvestment): number {
+  if (isLumpSumInvestment(inv.type)) return 0;
+  // Pure-protection insurance still costs money but does not contribute to corpus
+  return monthlyEquivalent(inv.amount, inv.frequency || "monthly");
+}
+
+// Insurance maturity events that arrive within the build-up window.
+export function insuranceMaturityEvents(
+  investments: CurrentInvestment[],
+  windowMonths: number,
+): Array<{
+  id: string;
+  subtype: InsuranceSubtype;
+  amount: number;
+  inMonth: number;
+  date: string;
+}> {
+  const out: Array<{
+    id: string;
+    subtype: InsuranceSubtype;
+    amount: number;
+    inMonth: number;
+    date: string;
+  }> = [];
+  for (const inv of investments) {
+    if (inv.type !== "protection_plan") continue;
+    if (!insuranceHasReturns(inv.insuranceSubtype)) continue;
+    const m = monthsUntilEndDate(inv.maturityDate);
+    if (m === null || m < 0 || m > windowMonths) continue;
+    out.push({
+      id: inv.id,
+      subtype: inv.insuranceSubtype as InsuranceSubtype,
+      amount: inv.maturityValue ?? 0,
+      inMonth: m,
+      date: inv.maturityDate as string,
+    });
+  }
+  out.sort((a, b) => a.inMonth - b.inMonth);
+  return out;
 }
 
 export function estimateInvestmentCurrentValue(investment: CurrentInvestment): number {
