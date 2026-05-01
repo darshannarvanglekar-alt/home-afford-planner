@@ -1320,12 +1320,44 @@ function buildCombinedProjection(
   timeline: number,
   existingProjected: number,
   target: number,
+  emiEvents: Array<{ amount: number; endsInMonth: number }> = [],
+  maturityEvents: Array<{ amount: number; inMonth: number }> = [],
 ) {
   const months = Math.max(1, Math.round(timeline || 1));
+  // Cumulative extra surplus available month-by-month from EMIs that have ended
+  const extraByMonth = new Array(months + 1).fill(0);
+  for (let m = 1; m <= months; m += 1) {
+    let extra = 0;
+    for (const e of emiEvents) {
+      if (m > e.endsInMonth) extra += e.amount;
+    }
+    extraByMonth[m] = extra;
+  }
+  // Cumulative one-time injections from insurance maturities up to month m
+  const injByMonth = new Array(months + 1).fill(0);
+  for (let m = 1; m <= months; m += 1) {
+    let inj = 0;
+    for (const e of maturityEvents) {
+      if (m >= e.inMonth) inj += e.amount;
+    }
+    injByMonth[m] = inj;
+  }
+  // Running redirected-EMI corpus (treated as plain accumulation, no rate)
   const points = Array.from({ length: months }, (_, index) => {
     const month = index + 1;
     const routeTotal = allocations.reduce((sum, item) => sum + routeValueAtMonth(item, month), 0);
-    return { month, total: routeTotal + (existingProjected * month) / months, target };
+    // Sum of redirected EMI amounts up to this month (each month adds the cumulative extra)
+    let redirected = 0;
+    for (let k = 1; k <= month; k += 1) redirected += extraByMonth[k];
+    return {
+      month,
+      total:
+        routeTotal +
+        (existingProjected * month) / months +
+        redirected +
+        injByMonth[month],
+      target,
+    };
   });
   const last = points[points.length - 1];
   const breakdown = allocations.map((item) => ({
