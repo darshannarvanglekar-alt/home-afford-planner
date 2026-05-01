@@ -1,19 +1,27 @@
 import * as React from "react";
-import { Loader2, Upload, X } from "lucide-react";
+import { Loader2, Plus, Upload, X } from "lucide-react";
 import { CurrencyInput } from "./CurrencyInput";
+import { FrequencySelect } from "./FrequencySelect";
+import { MonthYearPicker, formatYearMonth } from "./MonthYearPicker";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { proBadgeText } from "@/lib/subscription";
 import {
+  type AmountWithFrequency,
+  awfMonthly,
+  type ExistingEmi,
   type Finances,
   formatINR,
+  monthlyEquivalent,
+  type PaymentFrequency,
   surplus,
-  totalIncome,
   totalCommitments,
   totalExpenses,
+  totalIncome,
 } from "@/lib/plan-schema";
 
 interface ExtractedStatementValues {
