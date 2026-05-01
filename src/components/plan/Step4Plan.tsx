@@ -760,9 +760,25 @@ function CorpusBuilder({
   React.useEffect(() => setTimeline(Math.max(1, home.possessionMonth)), [home.possessionMonth]);
 
   const selected = new Set(allocations.map((item) => item.id));
+  const emiEvents = React.useMemo(
+    () => upcomingEmiEndEvents(finances, timeline),
+    [finances, timeline],
+  );
+  const maturityEvents = React.useMemo(
+    () => insuranceMaturityEvents(investments, timeline),
+    [investments, timeline],
+  );
   const result = React.useMemo(
-    () => buildCombinedProjection(allocations, timeline, existing.projectedCorpus, target),
-    [allocations, timeline, existing.projectedCorpus, target],
+    () =>
+      buildCombinedProjection(
+        allocations,
+        timeline,
+        existing.projectedCorpus,
+        target,
+        emiEvents,
+        maturityEvents,
+      ),
+    [allocations, timeline, existing.projectedCorpus, target, emiEvents, maturityEvents],
   );
   const totalMonthly = allocations.reduce(
     (sum, item) => sum + (isMonthlyRoute(item.id) ? item.amount : 0),
