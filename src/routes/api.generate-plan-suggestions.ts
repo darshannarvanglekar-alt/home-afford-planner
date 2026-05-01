@@ -46,6 +46,15 @@ const profileSchema = z.object({
   elderlyParents: z.boolean(),
   propertyType: z.string(),
   discretionary: z.number(),
+  emiEndEvents: z
+    .array(z.object({ label: z.string(), amount: z.number(), endsInMonth: z.number() }))
+    .optional()
+    .default([]),
+  insuranceMaturities: z
+    .array(z.object({ subtype: z.string(), amount: z.number(), inMonth: z.number() }))
+    .optional()
+    .default([]),
+  annualPaymentMonthlyEquivalent: z.number().optional().default(0),
 });
 
 const requestSchema = z.object({
