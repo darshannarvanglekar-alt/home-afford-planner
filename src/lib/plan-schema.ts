@@ -153,40 +153,37 @@ export const financesSchema = z.object({
     familyContribution: num,
   }),
   commitments: z.object({
+    // Legacy single-number EMI total (kept for back-compat)
     emis: num,
     insurance: num,
+    // New structured list of EMIs with end dates (Change 5)
+    emiList: z.array(existingEmiSchema).default([]).optional(),
   }),
   expenses: z
     .object({
-      housing: num,
-      family: num,
-      health: num,
-      daily: num,
-      schoolFees: num,
-      discretionary: num,
-      // Backward compat: accept legacy "investments" key from saved plans
-      investments: num.optional(),
+      housing: amountWithFrequencySchema.optional(),
+      family: amountWithFrequencySchema.optional(),
+      health: amountWithFrequencySchema.optional(),
+      daily: amountWithFrequencySchema.optional(),
+      schoolFees: amountWithFrequencySchema.optional(),
+      discretionary: amountWithFrequencySchema.optional(),
+      // Backward compat: accept legacy "investments" key
+      investments: amountWithFrequencySchema.optional(),
     })
     .transform((v) => {
-      const { investments, ...rest } = v;
-      if ((rest.schoolFees ?? 0) === 0 && typeof investments === "number" && investments > 0) {
-        return { ...rest, schoolFees: investments } as {
-          housing: number;
-          family: number;
-          health: number;
-          daily: number;
-          schoolFees: number;
-          discretionary: number;
-        };
-      }
-      return rest as {
-        housing: number;
-        family: number;
-        health: number;
-        daily: number;
-        schoolFees: number;
-        discretionary: number;
+      const def: AmountWithFrequency = { amount: 0, frequency: "monthly" };
+      const out = {
+        housing: v.housing ?? def,
+        family: v.family ?? def,
+        health: v.health ?? def,
+        daily: v.daily ?? def,
+        schoolFees: v.schoolFees ?? def,
+        discretionary: v.discretionary ?? def,
       };
+      if ((out.schoolFees.amount ?? 0) === 0 && v.investments && v.investments.amount > 0) {
+        out.schoolFees = v.investments;
+      }
+      return out;
     }),
 });
 
@@ -194,17 +191,16 @@ export type Finances = z.infer<typeof financesSchema>;
 
 export const defaultFinances: Finances = {
   income: { primarySalary: 0, additionalIncome: 0, familyContribution: 0 },
-  commitments: { emis: 0, insurance: 0 },
+  commitments: { emis: 0, insurance: 0, emiList: [] },
   expenses: {
-    housing: 0,
-    family: 0,
-    health: 0,
-    daily: 0,
-    schoolFees: 0,
-    discretionary: 0,
+    housing: { amount: 0, frequency: "monthly" },
+    family: { amount: 0, frequency: "monthly" },
+    health: { amount: 0, frequency: "monthly" },
+    daily: { amount: 0, frequency: "monthly" },
+    schoolFees: { amount: 0, frequency: "monthly" },
+    discretionary: { amount: 0, frequency: "monthly" },
   },
 };
-
 export function formatINR(n: number): string {
   if (!Number.isFinite(n)) return "₹0";
   const sign = n < 0 ? "-" : "";
