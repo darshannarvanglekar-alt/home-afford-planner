@@ -385,7 +385,7 @@ function SmartSuggestionsPanel({
           profile: {
             totalIncome: plan.totalIncome,
             totalExpenses: totalExpenses(finances),
-            existingEMIs: finances.commitments.emis,
+            existingEMIs: totalEmiList(finances, 0) || finances.commitments.emis,
             newEMI: plan.newEmi,
             surplus: plan.surplusAfterEmi,
             investments: currentInvestmentSummary.monthlyCommitment,
@@ -412,7 +412,7 @@ function SmartSuggestionsPanel({
             dependents: profile.dependents,
             elderlyParents: profile.elderlyParents,
             propertyType: home.propertyType,
-            discretionary: finances.expenses.discretionary,
+            discretionary: finances.expenses.discretionary?.amount ?? 0,
           },
         }),
       });
