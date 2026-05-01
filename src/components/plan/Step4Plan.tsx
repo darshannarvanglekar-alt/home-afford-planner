@@ -413,6 +413,18 @@ function SmartSuggestionsPanel({
             elderlyParents: profile.elderlyParents,
             propertyType: home.propertyType,
             discretionary: finances.expenses.discretionary?.amount ?? 0,
+            emiEndEvents: upcomingEmiEndEvents(finances, home.possessionMonth).map((e) => ({
+              label: e.label,
+              amount: e.amount,
+              endsInMonth: e.endsInMonth,
+            })),
+            insuranceMaturities: insuranceMaturityEvents(investments, home.possessionMonth).map(
+              (e) => ({ subtype: e.subtype, amount: e.amount, inMonth: e.inMonth }),
+            ),
+            annualPaymentMonthlyEquivalent: Object.values(finances.expenses).reduce(
+              (sum, e) => sum + (e && e.frequency === "annually" ? e.amount / 12 : 0),
+              0,
+            ),
           },
         }),
       });
