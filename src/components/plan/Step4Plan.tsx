@@ -47,11 +47,16 @@ import {
   type CurrentInvestment,
   type Finances,
   type Home,
+  insuranceMaturityEvents,
   loanAmount,
   type Profile,
   summarizeInvestments,
+  surplusAtOffset,
+  totalEmiList,
   totalExpenses,
+  upcomingEmiEndEvents,
 } from "@/lib/plan-schema";
+import { formatYearMonth } from "@/components/plan/MonthYearPicker";
 
 interface Props {
   finances: Finances;
@@ -380,7 +385,7 @@ function SmartSuggestionsPanel({
           profile: {
             totalIncome: plan.totalIncome,
             totalExpenses: totalExpenses(finances),
-            existingEMIs: finances.commitments.emis,
+            existingEMIs: totalEmiList(finances, 0) || finances.commitments.emis,
             newEMI: plan.newEmi,
             surplus: plan.surplusAfterEmi,
             investments: currentInvestmentSummary.monthlyCommitment,
@@ -407,7 +412,19 @@ function SmartSuggestionsPanel({
             dependents: profile.dependents,
             elderlyParents: profile.elderlyParents,
             propertyType: home.propertyType,
-            discretionary: finances.expenses.discretionary,
+            discretionary: finances.expenses.discretionary?.amount ?? 0,
+            emiEndEvents: upcomingEmiEndEvents(finances, home.possessionMonth).map((e) => ({
+              label: e.label,
+              amount: e.amount,
+              endsInMonth: e.endsInMonth,
+            })),
+            insuranceMaturities: insuranceMaturityEvents(investments, home.possessionMonth).map(
+              (e) => ({ subtype: e.subtype, amount: e.amount, inMonth: e.inMonth }),
+            ),
+            annualPaymentMonthlyEquivalent: Object.values(finances.expenses).reduce(
+              (sum, e) => sum + (e && e.frequency === "annually" ? e.amount / 12 : 0),
+              0,
+            ),
           },
         }),
       });
@@ -755,9 +772,25 @@ function CorpusBuilder({
   React.useEffect(() => setTimeline(Math.max(1, home.possessionMonth)), [home.possessionMonth]);
 
   const selected = new Set(allocations.map((item) => item.id));
+  const emiEvents = React.useMemo(
+    () => upcomingEmiEndEvents(finances, timeline),
+    [finances, timeline],
+  );
+  const maturityEvents = React.useMemo(
+    () => insuranceMaturityEvents(investments, timeline),
+    [investments, timeline],
+  );
   const result = React.useMemo(
-    () => buildCombinedProjection(allocations, timeline, existing.projectedCorpus, target),
-    [allocations, timeline, existing.projectedCorpus, target],
+    () =>
+      buildCombinedProjection(
+        allocations,
+        timeline,
+        existing.projectedCorpus,
+        target,
+        emiEvents,
+        maturityEvents,
+      ),
+    [allocations, timeline, existing.projectedCorpus, target, emiEvents, maturityEvents],
   );
   const totalMonthly = allocations.reduce(
     (sum, item) => sum + (isMonthlyRoute(item.id) ? item.amount : 0),
@@ -810,6 +843,34 @@ function CorpusBuilder({
           toward your target. You need {formatINR(Math.max(0, target - existing.projectedCorpus))}{" "}
           more.
         </div>
+
+        {emiEvents.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {emiEvents.map((e) => (
+              <div
+                key={e.id}
+                className="rounded-xl border border-success/25 bg-success-soft/55 p-3 text-sm font-medium text-success-soft-foreground"
+              >
+                Your {e.label} ends in {formatYearMonth(e.endDate)}. Your monthly surplus increases
+                by {formatINR(e.amount)} from that point — this has been factored into your corpus
+                projection.
+              </div>
+            ))}
+          </div>
+        )}
+        {maturityEvents.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {maturityEvents.map((e) => (
+              <div
+                key={e.id}
+                className="rounded-xl border border-primary/20 bg-primary-soft p-3 text-sm font-medium text-primary-soft-foreground"
+              >
+                Your {e.subtype.replace(/_/g, " ")} policy matures in {formatYearMonth(e.date)}{" "}
+                adding {formatINR(e.amount)} to your corpus.
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <MetricCard label="Current Savings" value={formatINR(existing.currentCorpus)} />
@@ -1299,12 +1360,44 @@ function buildCombinedProjection(
   timeline: number,
   existingProjected: number,
   target: number,
+  emiEvents: Array<{ amount: number; endsInMonth: number }> = [],
+  maturityEvents: Array<{ amount: number; inMonth: number }> = [],
 ) {
   const months = Math.max(1, Math.round(timeline || 1));
+  // Cumulative extra surplus available month-by-month from EMIs that have ended
+  const extraByMonth = new Array(months + 1).fill(0);
+  for (let m = 1; m <= months; m += 1) {
+    let extra = 0;
+    for (const e of emiEvents) {
+      if (m > e.endsInMonth) extra += e.amount;
+    }
+    extraByMonth[m] = extra;
+  }
+  // Cumulative one-time injections from insurance maturities up to month m
+  const injByMonth = new Array(months + 1).fill(0);
+  for (let m = 1; m <= months; m += 1) {
+    let inj = 0;
+    for (const e of maturityEvents) {
+      if (m >= e.inMonth) inj += e.amount;
+    }
+    injByMonth[m] = inj;
+  }
+  // Running redirected-EMI corpus (treated as plain accumulation, no rate)
   const points = Array.from({ length: months }, (_, index) => {
     const month = index + 1;
     const routeTotal = allocations.reduce((sum, item) => sum + routeValueAtMonth(item, month), 0);
-    return { month, total: routeTotal + (existingProjected * month) / months, target };
+    // Sum of redirected EMI amounts up to this month (each month adds the cumulative extra)
+    let redirected = 0;
+    for (let k = 1; k <= month; k += 1) redirected += extraByMonth[k];
+    return {
+      month,
+      total:
+        routeTotal +
+        (existingProjected * month) / months +
+        redirected +
+        injByMonth[month],
+      target,
+    };
   });
   const last = points[points.length - 1];
   const breakdown = allocations.map((item) => ({

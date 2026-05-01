@@ -4,14 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { CurrencyInput } from "./CurrencyInput";
+import { FrequencySelect } from "./FrequencySelect";
+import { MonthYearPicker } from "./MonthYearPicker";
 import { cn } from "@/lib/utils";
 import {
   formatINR,
+  insuranceDefaultReturns,
+  insuranceHasReturns,
+  insuranceIsAnnuity,
+  insuranceIsPureProtection,
+  INSURANCE_SUBTYPES,
+  insuranceSubtypeLabels,
   investmentDefaultRates,
   investmentTypeLabels,
   isLumpSumInvestment,
+  monthlyEquivalent,
   summarizeInvestments,
   type CurrentInvestment,
+  type InsuranceSubtype,
   type InvestmentType,
 } from "@/lib/plan-schema";
 
@@ -115,6 +125,16 @@ function InvestmentRow({
   onRemove: () => void;
 }) {
   const lumpSum = isLumpSumInvestment(investment.type);
+  const isInsurance = investment.type === "protection_plan";
+  const subtype = investment.insuranceSubtype;
+  const showReturns = isInsurance && insuranceHasReturns(subtype);
+  const showAnnuity = isInsurance && insuranceIsAnnuity(subtype);
+  const showProtectionOnly = isInsurance && insuranceIsPureProtection(subtype);
+  const frequency = investment.frequency || "monthly";
+  const monthlyEq = !lumpSum && investment.amount > 0
+    ? monthlyEquivalent(investment.amount, frequency)
+    : 0;
+
   return (
     <article className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
       <div className="flex items-start justify-between gap-3">
@@ -137,7 +157,11 @@ function InvestmentRow({
             value={investment.type}
             onChange={(event) => {
               const type = event.target.value as InvestmentType;
-              onUpdate({ type, assumedReturn: investmentDefaultRates[type] });
+              onUpdate({
+                type,
+                assumedReturn: investmentDefaultRates[type],
+                insuranceSubtype: type === "protection_plan" ? subtype ?? "term" : undefined,
+              });
             }}
             className="mt-2 min-h-11 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-ring"
           >
@@ -148,9 +172,47 @@ function InvestmentRow({
             ))}
           </select>
         </label>
+
+        {/* Insurance subtype radios (Change 6) */}
+        {isInsurance && (
+          <div className="sm:col-span-2 rounded-xl border border-border bg-muted/25 p-3">
+            <p className="text-sm font-semibold text-foreground">Insurance type</p>
+            <div className="mt-3 grid gap-2">
+              {INSURANCE_SUBTYPES.map((s) => (
+                <label
+                  key={s}
+                  className="flex cursor-pointer items-start gap-2 rounded-lg border border-border bg-background p-2 text-sm"
+                >
+                  <input
+                    type="radio"
+                    name={`insurance-subtype-${investment.id}`}
+                    className="mt-0.5"
+                    checked={subtype === s}
+                    onChange={() => {
+                      const defaultReturn = insuranceDefaultReturns[s];
+                      onUpdate({
+                        insuranceSubtype: s,
+                        assumedReturn:
+                          typeof defaultReturn === "number"
+                            ? defaultReturn
+                            : investment.assumedReturn,
+                      });
+                    }}
+                  />
+                  <span className="leading-5 text-foreground">{insuranceSubtypeLabels[s]}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
         <label className="block">
           <span className="text-sm font-semibold text-foreground">
-            {lumpSum ? "Current value (₹)" : "Monthly contribution amount (₹)"}
+            {lumpSum
+              ? "Current value (₹)"
+              : isInsurance
+                ? "Premium amount (₹)"
+                : "Contribution amount (₹)"}
           </span>
           <CurrencyInput
             className="mt-2"
@@ -158,36 +220,154 @@ function InvestmentRow({
             onValueChange={(amount) => onUpdate({ amount })}
           />
         </label>
-        <NumberField
-          label="Assumed annual return (%)"
-          value={investment.assumedReturn}
-          onChange={(assumedReturn) => onUpdate({ assumedReturn })}
-          step="0.1"
-        />
-        <NumberField
-          label="How many months has this been running?"
-          value={investment.monthsRunning}
-          onChange={(monthsRunning) => onUpdate({ monthsRunning })}
-        />
-        <div className="rounded-xl border border-border bg-muted/25 p-3">
-          <div className="flex items-center justify-between gap-3">
+
+        {!lumpSum ? (
+          <label className="block">
             <span className="text-sm font-semibold text-foreground">
-              Is this investment continuing?
+              {isInsurance ? "Premium payment frequency" : "Payment frequency"}
             </span>
-            <Switch
-              checked={investment.continuing}
-              onCheckedChange={(continuing) => onUpdate({ continuing })}
-            />
+            <div className="mt-2">
+              <FrequencySelect value={frequency} onChange={(f) => onUpdate({ frequency: f })} />
+            </div>
+          </label>
+        ) : null}
+
+        {!lumpSum && monthlyEq > 0 ? (
+          <div className="sm:col-span-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+            <p className="text-xs font-medium text-muted-foreground">
+              Monthly equivalent: <span className="font-bold text-foreground">{formatINR(monthlyEq)}</span>
+            </p>
+            <p className="text-xs text-muted-foreground">Used in your monthly surplus calculation</p>
+            {frequency !== "monthly" ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                💡 Paying this monthly makes it easier to track your surplus and plan investments.
+              </p>
+            ) : null}
           </div>
-          {investment.continuing && !lumpSum ? (
+        ) : null}
+
+        {/* Standard recurring fields — hidden for pure-protection insurance and annuity */}
+        {!showProtectionOnly && !showAnnuity && (
+          <>
             <NumberField
-              className="mt-4"
-              label="How many more months will it continue?"
-              value={investment.monthsRemaining}
-              onChange={(monthsRemaining) => onUpdate({ monthsRemaining })}
+              label="Assumed annual return (%)"
+              value={investment.assumedReturn}
+              onChange={(assumedReturn) => onUpdate({ assumedReturn })}
+              step="0.1"
             />
-          ) : null}
-        </div>
+            <NumberField
+              label="How many months has this been running?"
+              value={investment.monthsRunning}
+              onChange={(monthsRunning) => onUpdate({ monthsRunning })}
+            />
+          </>
+        )}
+
+        {/* Continuing toggle (not relevant for pure-protection or annuity) */}
+        {!showProtectionOnly && !showAnnuity && (
+          <div className="sm:col-span-2 rounded-xl border border-border bg-muted/25 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold text-foreground">
+                Is this investment continuing?
+              </span>
+              <Switch
+                checked={investment.continuing}
+                onCheckedChange={(continuing) => onUpdate({ continuing })}
+              />
+            </div>
+            {investment.continuing && !lumpSum ? (
+              <NumberField
+                className="mt-4"
+                label="How many more months will it continue?"
+                value={investment.monthsRemaining}
+                onChange={(monthsRemaining) => onUpdate({ monthsRemaining })}
+              />
+            ) : null}
+          </div>
+        )}
+
+        {/* Pure-protection insurance: policy end / renewal date only */}
+        {showProtectionOnly && (
+          <div className="sm:col-span-2 rounded-xl border border-border bg-muted/25 p-3">
+            <p className="text-sm font-semibold text-foreground">Policy end / renewal date</p>
+            <div className="mt-2">
+              <MonthYearPicker
+                value={investment.policyEndDate}
+                onChange={(v) => onUpdate({ policyEndDate: v })}
+                ariaLabel="Policy end date"
+              />
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              This is treated as a monthly protection cost in your surplus calculation. It does not
+              contribute to corpus.
+            </p>
+          </div>
+        )}
+
+        {/* Insurance with returns: maturity inputs */}
+        {showReturns && (
+          <div className="sm:col-span-2 grid gap-4 rounded-xl border border-border bg-muted/25 p-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-sm font-semibold text-foreground">
+                Expected maturity value (₹)
+              </span>
+              <CurrencyInput
+                className="mt-2"
+                value={investment.maturityValue ?? 0}
+                onValueChange={(maturityValue) => onUpdate({ maturityValue })}
+              />
+            </label>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Maturity date</p>
+              <div className="mt-2">
+                <MonthYearPicker
+                  value={investment.maturityDate}
+                  onChange={(v) => onUpdate({ maturityDate: v })}
+                  ariaLabel="Maturity date"
+                />
+              </div>
+            </div>
+            <NumberField
+              label="Assumed annual return (%)"
+              value={investment.assumedReturn}
+              onChange={(assumedReturn) => onUpdate({ assumedReturn })}
+              step="0.1"
+            />
+            <p className="text-xs text-muted-foreground sm:col-span-2">
+              Treated as an investment — maturity value is added to your corpus projection at the
+              maturity date.
+            </p>
+          </div>
+        )}
+
+        {/* Pension / annuity inputs */}
+        {showAnnuity && (
+          <div className="sm:col-span-2 grid gap-4 rounded-xl border border-border bg-muted/25 p-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-sm font-semibold text-foreground">
+                Expected monthly income from policy (₹)
+              </span>
+              <CurrencyInput
+                className="mt-2"
+                value={investment.annuityMonthlyIncome ?? 0}
+                onValueChange={(annuityMonthlyIncome) => onUpdate({ annuityMonthlyIncome })}
+              />
+            </label>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Income starts from</p>
+              <div className="mt-2">
+                <MonthYearPicker
+                  value={investment.annuityStartDate}
+                  onChange={(v) => onUpdate({ annuityStartDate: v })}
+                  ariaLabel="Annuity start date"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground sm:col-span-2">
+              Treated as a future monthly income source in post-possession cash flow.
+            </p>
+          </div>
+        )}
       </div>
     </article>
   );
@@ -236,6 +416,7 @@ function newInvestment(): CurrentInvestment {
     id: crypto.randomUUID(),
     type: "monthly_market",
     amount: 0,
+    frequency: "monthly",
     assumedReturn: 10,
     monthsRunning: 0,
     continuing: true,
