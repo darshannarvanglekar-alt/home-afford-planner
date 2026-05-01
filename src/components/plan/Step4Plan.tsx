@@ -47,11 +47,16 @@ import {
   type CurrentInvestment,
   type Finances,
   type Home,
+  insuranceMaturityEvents,
   loanAmount,
   type Profile,
   summarizeInvestments,
+  surplusAtOffset,
+  totalEmiList,
   totalExpenses,
+  upcomingEmiEndEvents,
 } from "@/lib/plan-schema";
+import { formatYearMonth } from "@/components/plan/MonthYearPicker";
 
 interface Props {
   finances: Finances;
