@@ -832,6 +832,34 @@ function CorpusBuilder({
           more.
         </div>
 
+        {emiEvents.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {emiEvents.map((e) => (
+              <div
+                key={e.id}
+                className="rounded-xl border border-success/25 bg-success-soft/55 p-3 text-sm font-medium text-success-soft-foreground"
+              >
+                Your {e.label} ends in {formatYearMonth(e.endDate)}. Your monthly surplus increases
+                by {formatINR(e.amount)} from that point — this has been factored into your corpus
+                projection.
+              </div>
+            ))}
+          </div>
+        )}
+        {maturityEvents.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {maturityEvents.map((e) => (
+              <div
+                key={e.id}
+                className="rounded-xl border border-primary/20 bg-primary-soft p-3 text-sm font-medium text-primary-soft-foreground"
+              >
+                Your {e.subtype.replace(/_/g, " ")} policy matures in {formatYearMonth(e.date)}{" "}
+                adding {formatINR(e.amount)} to your corpus.
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <MetricCard label="Current Savings" value={formatINR(existing.currentCorpus)} />
           <MetricCard
