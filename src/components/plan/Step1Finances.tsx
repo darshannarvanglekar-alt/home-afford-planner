@@ -144,16 +144,17 @@ export function Step1Finances({
         familyContribution: Math.round(extracted.familyContribution),
       },
       commitments: {
+        ...value.commitments,
         emis: Math.round(extracted.existingEMIs),
         insurance: Math.round(extracted.insurancePremiums),
       },
       expenses: {
-        housing: Math.round(extracted.housingUtilities),
-        family: Math.round(extracted.familyDependents),
-        health: Math.round(extracted.healthProtection),
-        daily: Math.round(extracted.dailyLiving),
-        schoolFees: Math.round(extracted.investmentsSavings),
-        discretionary: Math.round(extracted.discretionary),
+        housing: { amount: Math.round(extracted.housingUtilities), frequency: "monthly" },
+        family: { amount: Math.round(extracted.familyDependents), frequency: "monthly" },
+        health: { amount: Math.round(extracted.healthProtection), frequency: "monthly" },
+        daily: { amount: Math.round(extracted.dailyLiving), frequency: "monthly" },
+        schoolFees: { amount: Math.round(extracted.investmentsSavings), frequency: "monthly" },
+        discretionary: { amount: Math.round(extracted.discretionary), frequency: "monthly" },
       },
     });
     setAiFields(
