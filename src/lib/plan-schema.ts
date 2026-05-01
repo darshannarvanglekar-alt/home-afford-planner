@@ -213,28 +213,69 @@ export function totalIncome(f: Finances): number {
   return safeNumber(i.primarySalary) + safeNumber(i.additionalIncome) + safeNumber(i.familyContribution);
 }
 
-export function totalCommitments(f: Finances): number {
+export function totalEmiList(f: Finances, monthOffset = 0): number {
+  const list = f.commitments.emiList ?? [];
+  return list
+    .filter((e) => isEmiActiveAtOffset(e, monthOffset))
+    .reduce((sum, e) => sum + safeNumber(e.amount), 0);
+}
+
+export function totalCommitments(f: Finances, monthOffset = 0): number {
+  // Prefer structured EMI list when populated, otherwise fall back to legacy total.
+  const list = f.commitments.emiList ?? [];
+  if (list.length > 0) return totalEmiList(f, monthOffset);
   return safeNumber(f.commitments.emis);
 }
 
 export function totalExpenses(f: Finances): number {
   const e = f.expenses;
   return (
-    safeNumber(e.housing) +
-    safeNumber(e.family) +
-    safeNumber(e.health) +
-    safeNumber(e.daily) +
-    safeNumber(e.discretionary)
+    awfMonthly(e.housing) +
+    awfMonthly(e.family) +
+    awfMonthly(e.health) +
+    awfMonthly(e.daily) +
+    awfMonthly(e.schoolFees) +
+    awfMonthly(e.discretionary)
   );
 }
 
-export function totalOutflow(f: Finances): number {
-  return totalCommitments(f) + totalExpenses(f);
+export function totalOutflow(f: Finances, monthOffset = 0): number {
+  return totalCommitments(f, monthOffset) + totalExpenses(f);
 }
 
 export function surplus(f: Finances): number {
-  const value = totalIncome(f) - totalOutflow(f);
+  const value = totalIncome(f) - totalOutflow(f, 0);
   return Number.isFinite(value) ? value : 0;
+}
+
+// Month-by-month surplus that drops EMIs as their end dates pass (Change 5).
+export function surplusAtOffset(f: Finances, monthOffset: number): number {
+  const value = totalIncome(f) - totalOutflow(f, monthOffset);
+  return Number.isFinite(value) ? value : 0;
+}
+
+// Returns events for EMIs that end within the build-up window, ordered by month.
+export function upcomingEmiEndEvents(
+  f: Finances,
+  windowMonths: number,
+): Array<{ id: string; label: string; amount: number; endsInMonth: number; endDate: string }> {
+  const list = f.commitments.emiList ?? [];
+  const events = list
+    .map((e) => {
+      const remaining = monthsUntilEndDate(e.endDate);
+      if (remaining === null || remaining < 0) return null;
+      if (remaining > windowMonths) return null;
+      return {
+        id: e.id,
+        label: e.label || "EMI",
+        amount: e.amount,
+        endsInMonth: remaining,
+        endDate: e.endDate as string,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+  events.sort((a, b) => a.endsInMonth - b.endsInMonth);
+  return events;
 }
 
 function safeNumber(value: number): number {
