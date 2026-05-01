@@ -508,10 +508,10 @@ export function calculateAffordabilityPlan(
 
   const essentialExpenses =
     totalCommitments(finances) +
-    (finances.expenses.housing || 0) +
-    (finances.expenses.family || 0) +
-    (finances.expenses.health || 0) +
-    (finances.expenses.daily || 0);
+    awfMonthly(finances.expenses.housing) +
+    awfMonthly(finances.expenses.family) +
+    awfMonthly(finances.expenses.health) +
+    awfMonthly(finances.expenses.daily);
   const investmentRatio = surplusAfterEmi > 0 ? 2 : 0;
 
   return {
