@@ -473,6 +473,99 @@ export function Step1Finances({
             Based on monthly equivalents of all your expenses.
           </p>
         </dl>
+      </section>
+    </div>
+  );
+}
+
+function EmiList({
+  value,
+  onChange,
+}: {
+  value: Finances;
+  onChange: (next: Finances) => void;
+}) {
+  const list = value.commitments.emiList ?? [];
+  const update = (next: ExistingEmi[]) => {
+    onChange({ ...value, commitments: { ...value.commitments, emiList: next } });
+  };
+  const addRow = () => {
+    update([
+      ...list,
+      { id: crypto.randomUUID(), label: "", amount: 0, endDate: undefined },
+    ]);
+  };
+  const updateRow = (id: string, patch: Partial<ExistingEmi>) => {
+    update(list.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  };
+  const removeRow = (id: string) => update(list.filter((e) => e.id !== id));
+
+  return (
+    <div className="mt-4 space-y-3">
+      {list.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+          No EMIs added. Skip if you have none.
+        </div>
+      ) : (
+        list.map((emi) => (
+          <div key={emi.id} className="rounded-xl border border-border bg-background p-3">
+            <div className="grid gap-3 sm:grid-cols-[1.2fr_1fr_1.4fr_auto]">
+              <div>
+                <Label className="text-xs text-muted-foreground">Label</Label>
+                <Input
+                  className="mt-1 min-h-11"
+                  placeholder="e.g. Car loan"
+                  value={emi.label}
+                  onChange={(e) => updateRow(emi.id, { label: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Monthly EMI (₹)</Label>
+                <CurrencyInput
+                  className="mt-1"
+                  value={emi.amount}
+                  onValueChange={(n) => updateRow(emi.id, { amount: n })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">EMI ends in</Label>
+                <div className="mt-1">
+                  <MonthYearPicker
+                    value={emi.endDate}
+                    onChange={(v) => updateRow(emi.id, { endDate: v })}
+                    ariaLabel="EMI end date"
+                  />
+                </div>
+              </div>
+              <div className="flex items-end justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="min-h-11 min-w-11"
+                  onClick={() => removeRow(emi.id)}
+                  aria-label="Remove EMI"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            {emi.endDate ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Ends {formatYearMonth(emi.endDate)} — surplus increases by{" "}
+                {formatINR(emi.amount)} from then on.
+              </p>
+            ) : null}
+          </div>
+        ))
+      )}
+      <Button type="button" variant="outline" className="min-h-11" onClick={addRow}>
+        <Plus className="h-4 w-4" />
+        Add EMI
+      </Button>
+    </div>
+  );
+}
 function Field({
   label,
   helper,
