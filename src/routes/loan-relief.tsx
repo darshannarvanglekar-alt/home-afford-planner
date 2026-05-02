@@ -5,7 +5,6 @@ import {
   Legend,
   Line,
   LineChart,
-  ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
