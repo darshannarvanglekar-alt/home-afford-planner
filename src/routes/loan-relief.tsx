@@ -1,5 +1,5 @@
 import * as React from "react";
-import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   CartesianGrid,
   Legend,
