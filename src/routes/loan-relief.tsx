@@ -75,10 +75,12 @@ export const Route = createFileRoute("/loan-relief")({
       },
     ],
   }),
-  validateSearch: (search: Record<string, unknown>) => ({
-    corpusAmount: typeof search.corpusAmount === "number" ? search.corpusAmount : undefined,
-    possessionMonth: typeof search.possessionMonth === "number" ? search.possessionMonth : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      corpusAmount: typeof search.corpusAmount === "number" ? search.corpusAmount : undefined,
+      possessionMonth: typeof search.possessionMonth === "number" ? search.possessionMonth : undefined,
+    } as { corpusAmount?: number; possessionMonth?: number };
+  },
   component: LoanReliefPage,
 });
 
