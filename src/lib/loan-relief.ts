@@ -1,33 +1,58 @@
 // Loan Relief Planner — pure calculations.
-// Builds month-by-month amortization with optional one-time prepayment
-// and/or recurring extra monthly payments (with annual step-up).
+// Supports multiple part payments at any point in the loan lifecycle.
 import { calcEMI } from "@/lib/plan-schema";
 
 export type PrepayMode = "reduce_emi" | "shorten_tenure";
 
+export interface PartPayment {
+  id: string;
+  label: string;
+  amount: number;
+  timing: "before_possession" | "after_possession";
+  month: number; // 1-based month relative to timing context
+  mode: PrepayMode;
+}
+
+// Legacy interface kept for compatibility
 export interface LoanReliefInputs {
   principal: number;
   annualRatePct: number;
   tenureYears: number;
-  emiOverride?: number; // if user manually edits EMI
+  emiOverride?: number;
   startYear: number;
   startMonth: number; // 1-12
-  // One-time
+  // One-time (legacy)
   oneTimeAmount: number;
-  oneTimeAtMonth: number; // 1-based month index from start
+  oneTimeAtMonth: number;
   oneTimeMode: PrepayMode;
   // Recurring extra
   extraMonthly: number;
-  extraStartMonth: number; // 1-based
+  extraStartMonth: number;
   stepUpEnabled: boolean;
-  stepUpPct: number; // e.g. 10
-  // Toggle which scenarios are active
+  stepUpPct: number;
   useOneTime: boolean;
   useRecurring: boolean;
 }
 
+export interface MultiPaymentInputs {
+  principal: number;
+  annualRatePct: number;
+  tenureYears: number;
+  emiOverride?: number;
+  startYear: number;
+  startMonth: number;
+  possessionMonth?: number; // month offset from loan start when possession happens
+  partPayments: PartPayment[];
+  // Recurring extra (kept)
+  extraMonthly: number;
+  extraStartMonth: number;
+  stepUpEnabled: boolean;
+  stepUpPct: number;
+  useRecurring: boolean;
+}
+
 export interface AmortPoint {
-  month: number; // 1-based month from start
+  month: number;
   balance: number;
   interestPaid: number;
   principalPaid: number;
@@ -38,8 +63,8 @@ export interface AmortResult {
   points: AmortPoint[];
   totalInterest: number;
   totalPaid: number;
-  monthsToClose: number; // months until balance hits 0
-  emi: number; // base EMI used
+  monthsToClose: number;
+  emi: number;
   closureDate: { year: number; month: number };
 }
 
@@ -55,16 +80,24 @@ export function monthLabel(year: number, month: number): string {
   return date.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
 }
 
-function amortize(opts: {
+export function monthLabelFromOffset(startYear: number, startMonth: number, offset: number): string {
+  const d = addMonths(startYear, startMonth, offset - 1);
+  return monthLabel(d.year, d.month);
+}
+
+interface AmortizeOpts {
   principal: number;
   annualRatePct: number;
   emi: number;
   maxMonths: number;
-  oneTime?: { amount: number; atMonth: number; mode: PrepayMode } | null;
+  // Map of month -> array of { amount, mode }
+  partPaymentsByMonth?: Map<number, Array<{ amount: number; mode: PrepayMode }>>;
   recurring?: { amount: number; startMonth: number; stepUpPct: number } | null;
   startYear: number;
   startMonth: number;
-}): AmortResult {
+}
+
+function amortize(opts: AmortizeOpts): AmortResult {
   const r = opts.annualRatePct / 12 / 100;
   let balance = Math.max(0, opts.principal);
   let emi = opts.emi;
@@ -76,7 +109,7 @@ function amortize(opts: {
 
   for (let m = 1; m <= opts.maxMonths; m += 1) {
     if (balance <= 0.5) break;
-    // Annual step-up applied at the start of each new "year of extra payments"
+
     if (
       opts.recurring &&
       opts.recurring.stepUpPct > 0 &&
@@ -99,17 +132,19 @@ function amortize(opts: {
       payment += extra;
     }
 
-    // One-time prepayment
-    if (opts.oneTime && m === opts.oneTime.atMonth && balance > 0) {
-      const lump = Math.min(opts.oneTime.amount, balance);
-      balance -= lump;
-      payment += lump;
-      // Recompute EMI if user wants to reduce EMI (keep remaining tenure)
-      if (opts.oneTime.mode === "reduce_emi") {
-        const remainingMonths = Math.max(1, opts.maxMonths - m);
-        emi = calcEMI(balance, opts.annualRatePct, remainingMonths / 12);
+    // Part payments at this month
+    const pps = opts.partPaymentsByMonth?.get(m);
+    if (pps) {
+      for (const pp of pps) {
+        if (balance <= 0.5) break;
+        const lump = Math.min(pp.amount, balance);
+        balance -= lump;
+        payment += lump;
+        if (pp.mode === "reduce_emi" && balance > 0.5) {
+          const remainingMonths = Math.max(1, opts.maxMonths - m);
+          emi = calcEMI(balance, opts.annualRatePct, remainingMonths / 12);
+        }
       }
-      // shorten_tenure: keep EMI as-is
     }
 
     totalInterest += interest;
@@ -129,14 +164,32 @@ function amortize(opts: {
   return { points, totalInterest, totalPaid, monthsToClose, emi: opts.emi, closureDate };
 }
 
-export function computeRelief(inputs: LoanReliefInputs) {
+/** Resolve part payments to absolute month offsets from loan start */
+export function resolvePartPayments(
+  payments: PartPayment[],
+  possessionMonth: number,
+): Array<{ month: number; amount: number; mode: PrepayMode; label: string; id: string }> {
+  return payments
+    .filter((p) => p.amount > 0)
+    .map((p) => ({
+      id: p.id,
+      label: p.label || "Part payment",
+      amount: p.amount,
+      mode: p.mode,
+      month:
+        p.timing === "before_possession"
+          ? Math.max(1, p.month)
+          : Math.max(1, (possessionMonth || 1) + p.month),
+    }));
+}
+
+export function computeMultiPaymentRelief(inputs: MultiPaymentInputs) {
   const baseEmi =
     inputs.emiOverride && inputs.emiOverride > 0
       ? inputs.emiOverride
       : calcEMI(inputs.principal, inputs.annualRatePct, inputs.tenureYears);
 
   const totalMonths = Math.max(1, Math.round(inputs.tenureYears * 12));
-  // Allow some headroom in case of override producing very low EMI
   const maxMonths = Math.max(totalMonths, 12 * 50);
 
   const baseline = amortize({
@@ -148,14 +201,104 @@ export function computeRelief(inputs: LoanReliefInputs) {
     startMonth: inputs.startMonth,
   });
 
-  const oneTime =
-    inputs.useOneTime && inputs.oneTimeAmount > 0
+  const possessionMonth = inputs.possessionMonth || 1;
+  const resolved = resolvePartPayments(inputs.partPayments, possessionMonth);
+
+  // Build part payments map
+  const ppMap = new Map<number, Array<{ amount: number; mode: PrepayMode }>>();
+  for (const rp of resolved) {
+    const existing = ppMap.get(rp.month) || [];
+    existing.push({ amount: rp.amount, mode: rp.mode });
+    ppMap.set(rp.month, existing);
+  }
+
+  const recurring =
+    inputs.useRecurring && inputs.extraMonthly > 0
       ? {
-          amount: inputs.oneTimeAmount,
-          atMonth: Math.max(1, Math.min(inputs.oneTimeAtMonth, totalMonths)),
-          mode: inputs.oneTimeMode,
+          amount: inputs.extraMonthly,
+          startMonth: Math.max(1, Math.min(inputs.extraStartMonth, totalMonths)),
+          stepUpPct: inputs.stepUpEnabled ? inputs.stepUpPct : 0,
         }
       : null;
+
+  const withPayments = amortize({
+    principal: inputs.principal,
+    annualRatePct: inputs.annualRatePct,
+    emi: baseEmi,
+    maxMonths,
+    partPaymentsByMonth: ppMap,
+    recurring,
+    startYear: inputs.startYear,
+    startMonth: inputs.startMonth,
+  });
+
+  const interestSaved = Math.max(0, baseline.totalInterest - withPayments.totalInterest);
+  const monthsSaved = Math.max(0, baseline.monthsToClose - withPayments.monthsToClose);
+
+  // Per-payment impact breakdown: compute each payment in isolation
+  const perPaymentImpact = resolved.map((rp) => {
+    const singleMap = new Map<number, Array<{ amount: number; mode: PrepayMode }>>();
+    singleMap.set(rp.month, [{ amount: rp.amount, mode: rp.mode }]);
+    const singleResult = amortize({
+      principal: inputs.principal,
+      annualRatePct: inputs.annualRatePct,
+      emi: baseEmi,
+      maxMonths,
+      partPaymentsByMonth: singleMap,
+      startYear: inputs.startYear,
+      startMonth: inputs.startMonth,
+    });
+    return {
+      id: rp.id,
+      label: rp.label,
+      month: rp.month,
+      amount: rp.amount,
+      interestSaved: Math.max(0, baseline.totalInterest - singleResult.totalInterest),
+      monthsSaved: Math.max(0, baseline.monthsToClose - singleResult.monthsToClose),
+    };
+  });
+
+  // Check if any payment uses reduce_emi mode — if so build that path too
+  const hasReduceEmi = resolved.some((rp) => rp.mode === "reduce_emi");
+
+  return {
+    baseEmi,
+    baseline,
+    withPayments,
+    interestSaved,
+    monthsSaved,
+    perPaymentImpact,
+    hasReduceEmi,
+    resolved,
+    possessionMonth,
+  };
+}
+
+// Legacy API preserved for backward compatibility
+export function computeRelief(inputs: LoanReliefInputs) {
+  const baseEmi =
+    inputs.emiOverride && inputs.emiOverride > 0
+      ? inputs.emiOverride
+      : calcEMI(inputs.principal, inputs.annualRatePct, inputs.tenureYears);
+
+  const totalMonths = Math.max(1, Math.round(inputs.tenureYears * 12));
+  const maxMonths = Math.max(totalMonths, 12 * 50);
+
+  const baseline = amortize({
+    principal: inputs.principal,
+    annualRatePct: inputs.annualRatePct,
+    emi: baseEmi,
+    maxMonths,
+    startYear: inputs.startYear,
+    startMonth: inputs.startMonth,
+  });
+
+  const ppMap = new Map<number, Array<{ amount: number; mode: PrepayMode }>>();
+  if (inputs.useOneTime && inputs.oneTimeAmount > 0) {
+    const atMonth = Math.max(1, Math.min(inputs.oneTimeAtMonth, totalMonths));
+    ppMap.set(atMonth, [{ amount: inputs.oneTimeAmount, mode: inputs.oneTimeMode }]);
+  }
+
   const recurring =
     inputs.useRecurring && inputs.extraMonthly > 0
       ? {
@@ -170,7 +313,7 @@ export function computeRelief(inputs: LoanReliefInputs) {
     annualRatePct: inputs.annualRatePct,
     emi: baseEmi,
     maxMonths,
-    oneTime,
+    partPaymentsByMonth: ppMap,
     recurring,
     startYear: inputs.startYear,
     startMonth: inputs.startMonth,
@@ -202,4 +345,39 @@ export function buildChartData(baseline: AmortResult, withPrepay: AmortResult) {
     });
   }
   return data;
+}
+
+export function buildMultiChartData(
+  baseline: AmortResult,
+  withPayments: AmortResult,
+  resolved: Array<{ month: number; label: string; amount: number }>,
+  possessionMonth: number,
+) {
+  const len = Math.max(baseline.points.length, withPayments.points.length);
+  const data: Array<{
+    month: number;
+    without: number | null;
+    withPayments: number | null;
+    isPossession?: boolean;
+    paymentEvent?: { label: string; amount: number };
+  }> = [];
+  const paymentMonths = new Map(resolved.map((r) => [r.month, r]));
+  for (let i = 0; i < len; i += 1) {
+    const m = i + 1;
+    const entry: (typeof data)[0] = {
+      month: m,
+      without: baseline.points[i]?.balance ?? null,
+      withPayments: withPayments.points[i]?.balance ?? (i < withPayments.monthsToClose ? null : 0),
+    };
+    if (m === possessionMonth) entry.isPossession = true;
+    const pe = paymentMonths.get(m);
+    if (pe) entry.paymentEvent = { label: pe.label, amount: pe.amount };
+    data.push(entry);
+  }
+  return data;
+}
+
+export function generatePartPaymentId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `pp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
