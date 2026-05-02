@@ -1037,6 +1037,22 @@ function CorpusBuilder({
         </p>
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{DISCLAIMER}</p>
 
+        {result.final > 0 && (
+          <div className="mt-5">
+            <Button type="button" variant="outline" className="w-full min-h-11" asChild>
+              <Link
+                to="/loan-relief"
+                search={{
+                  corpusAmount: Math.round(result.final * 0.5),
+                  possessionMonth: timeline,
+                }}
+              >
+                Use part of this corpus for a part payment →
+              </Link>
+            </Button>
+          </div>
+        )}
+
         <div className="mt-6 flex justify-end">
           <SaveScenarioButton
             finances={finances}

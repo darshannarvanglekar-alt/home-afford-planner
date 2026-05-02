@@ -11,23 +11,32 @@ const requestSchema = z.object({
   withPrepayTotalInterest: z.number(),
   interestSaved: z.number(),
   monthsSaved: z.number(),
-  oneTimeAmount: z.number(),
-  oneTimeAtMonth: z.number(),
-  extraMonthly: z.number(),
-  extraStartMonth: z.number(),
-  stepUpPct: z.number(),
+  partPayments: z.array(z.object({
+    label: z.string(),
+    amount: z.number(),
+    month: z.number(),
+    interestSaved: z.number(),
+    monthsSaved: z.number(),
+  })).optional().default([]),
+  // Legacy fields kept for compat
+  oneTimeAmount: z.number().optional(),
+  oneTimeAtMonth: z.number().optional(),
+  extraMonthly: z.number().optional().default(0),
+  extraStartMonth: z.number().optional().default(0),
+  stepUpPct: z.number().optional().default(0),
 });
 
 const SYSTEM_PROMPT = `You generate ONE short neutral observation for an Indian loan-relief scenario simulator. This is NOT financial advice.
 
 Strict rules:
-- Output a single sentence, max 35 words.
+- Output a single sentence, max 45 words.
 - Use actual rupee numbers from the data provided.
 - Frame as an observation, never as advice. Use "If you...", "Your scenario shows...", "Prepaying ₹X in month Y...".
 - Never use words: "we recommend", "you should", "best", "advisor", "advice", "SIP", "SWP", "mutual fund", "bank", "lender", "AMC", "insurance", "platform", "fund", "loan provider".
 - Never mention any brand or company name.
 - Label as illustrative — based on assumed rates entered by the user.
-- Return ONLY plain text, no JSON, no quotes, no markdown.`;
+- Return ONLY plain text, no JSON, no quotes, no markdown.
+- If multiple part payments are provided, comment on relative impact or compound effect.`;
 
 export const Route = createFileRoute("/api/generate-loan-relief-nudge")({
   server: {
@@ -47,16 +56,21 @@ export const Route = createFileRoute("/api/generate-loan-relief-nudge")({
           if (!apiKey) return Response.json({ error: "not configured" }, { status: 500 });
 
           const p = parsed.data;
+          const ppList = p.partPayments.length > 0
+            ? p.partPayments.map((pp) => `  - "${pp.label}": ₹${Math.round(pp.amount)} at month ${pp.month} → saves ₹${Math.round(pp.interestSaved)} interest, ${pp.monthsSaved} months`).join("\n")
+            : p.oneTimeAmount ? `  - One-time: ₹${Math.round(p.oneTimeAmount)} at month ${p.oneTimeAtMonth ?? 0}` : "  - None";
+
           const userPrompt = `Loan scenario:
 - Principal: ₹${Math.round(p.principal)}
 - Rate (assumed): ${p.annualRatePct}%
 - Tenure: ${p.tenureYears} years
 - Monthly EMI: ₹${Math.round(p.baseEmi)}
-- Total interest without prepayment: ₹${Math.round(p.baselineTotalInterest)}
-- Total interest with prepayment: ₹${Math.round(p.withPrepayTotalInterest)}
-- Interest saved (illustrative): ₹${Math.round(p.interestSaved)}
-- Time saved: ${p.monthsSaved} months
-- One-time prepayment: ₹${Math.round(p.oneTimeAmount)} at month ${p.oneTimeAtMonth}
+- Total interest without part payments: ₹${Math.round(p.baselineTotalInterest)}
+- Total interest with part payments: ₹${Math.round(p.withPrepayTotalInterest)}
+- Combined interest saved (illustrative): ₹${Math.round(p.interestSaved)}
+- Combined time saved: ${p.monthsSaved} months
+- Part payments:
+${ppList}
 - Extra monthly: ₹${Math.round(p.extraMonthly)} from month ${p.extraStartMonth}, step-up ${p.stepUpPct}%/yr
 
 Write one short neutral observation about the most impactful aspect.`;

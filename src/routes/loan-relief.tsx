@@ -5,6 +5,7 @@ import {
   Legend,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -15,21 +16,27 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteNav } from "@/components/site/SiteNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useAuth } from "@/lib/auth";
 import { formatINR } from "@/lib/plan-schema";
 import {
-  buildChartData,
-  computeRelief,
+  buildMultiChartData,
+  computeMultiPaymentRelief,
   formatYearsMonths,
+  generatePartPaymentId,
   monthLabel,
-  type LoanReliefInputs,
+  monthLabelFromOffset,
+  type MultiPaymentInputs,
+  type PartPayment,
   type PrepayMode,
 } from "@/lib/loan-relief";
 import {
@@ -47,6 +54,8 @@ import {
 } from "@/lib/plan-schema";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ChevronDown, Plus, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/loan-relief")({
   head: () => ({
@@ -55,16 +64,22 @@ export const Route = createFileRoute("/loan-relief")({
       {
         name: "description",
         content:
-          "See how prepayments and extra contributions reduce your interest burden and close your loan faster.",
+          "See how part payments reduce your interest burden and close your loan faster.",
       },
       { property: "og:title", content: "Loan Relief Planner — HomeAfford" },
       {
         property: "og:description",
         content:
-          "Illustrative scenarios for loan prepayment impact — interest saved and time saved.",
+          "Illustrative scenarios for loan part payment impact — interest saved and time saved.",
       },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      corpusAmount: typeof search.corpusAmount === "number" ? search.corpusAmount : undefined,
+      possessionMonth: typeof search.possessionMonth === "number" ? search.possessionMonth : undefined,
+    } as { corpusAmount?: number; possessionMonth?: number };
+  },
   component: LoanReliefPage,
 });
 
@@ -77,18 +92,29 @@ function compactINR(n: number): string {
   return `₹${Math.round(n)}`;
 }
 
+const MAX_PART_PAYMENTS = 10;
+
+function createEmptyPartPayment(): PartPayment {
+  return {
+    id: generatePartPaymentId(),
+    label: "",
+    amount: 0,
+    timing: "before_possession",
+    month: 1,
+    mode: "shorten_tenure",
+  };
+}
+
 function LoanReliefPage() {
   const { user } = useAuth();
   const now = new Date();
+  const search = Route.useSearch();
 
-  // Try to pre-fill from a staged scenario load
   const staged = React.useMemo(() => takePendingLoad(), []);
   const initialPrincipal = staged?.outputs?.loanAmount ?? 0;
   const initialRate = staged?.outputs?.interestRate ?? 8.5;
   const initialTenure = staged?.outputs?.tenureYears ?? 20;
-  const initialCorpus = staged?.outputs?.projectedCorpus ?? 0;
 
-  // Inputs
   const [principal, setPrincipal] = React.useState<number>(initialPrincipal);
   const [rate, setRate] = React.useState<number>(initialRate);
   const [tenure, setTenure] = React.useState<number>(initialTenure);
@@ -96,119 +122,75 @@ function LoanReliefPage() {
   const [emiTouched, setEmiTouched] = React.useState(false);
   const [startMonth, setStartMonth] = React.useState<number>(now.getMonth() + 1);
   const [startYear, setStartYear] = React.useState<number>(now.getFullYear());
+  const [possessionMonth, setPossessionMonth] = React.useState<number>(
+    search.possessionMonth ?? 36
+  );
 
-  // Tabs / mode
-  const [tab, setTab] = React.useState<"onetime" | "recurring">("onetime");
-  const [combine, setCombine] = React.useState(false);
+  // Part payments
+  const [partPayments, setPartPayments] = React.useState<PartPayment[]>(() => {
+    if (search.corpusAmount && search.corpusAmount > 0) {
+      return [
+        {
+          id: generatePartPaymentId(),
+          label: "Corpus at possession",
+          amount: search.corpusAmount,
+          timing: "before_possession",
+          month: search.possessionMonth ?? 36,
+          mode: "shorten_tenure",
+        },
+      ];
+    }
+    return [];
+  });
 
-  // One-time
-  const [oneTimeAmount, setOneTimeAmount] = React.useState<number>(0);
-  const [oneTimeAtMonth, setOneTimeAtMonth] = React.useState<number>(12);
-  const [oneTimeMode, setOneTimeMode] = React.useState<PrepayMode>("shorten_tenure");
-
-  // Recurring
+  // Recurring extra
   const [extraMonthly, setExtraMonthly] = React.useState<number>(0);
   const [extraStartMonth, setExtraStartMonth] = React.useState<number>(1);
   const [stepUpEnabled, setStepUpEnabled] = React.useState<boolean>(false);
   const [stepUpPct, setStepUpPct] = React.useState<number>(10);
-
-  // Corpus connector
-  const [corpusAvailable, setCorpusAvailable] = React.useState<number>(initialCorpus);
-  const [corpusUsedPct, setCorpusUsedPct] = React.useState<number>(50);
-
-  const useOneTime = tab === "onetime" || combine;
-  const useRecurring = tab === "recurring" || combine;
+  const [showRecurring, setShowRecurring] = React.useState(false);
 
   const totalMonths = Math.max(12, Math.round(tenure * 12));
 
-  // Clamp month sliders if tenure shrinks
-  React.useEffect(() => {
-    if (oneTimeAtMonth > totalMonths) setOneTimeAtMonth(totalMonths);
-    if (extraStartMonth > totalMonths) setExtraStartMonth(totalMonths);
-  }, [totalMonths, oneTimeAtMonth, extraStartMonth]);
-
-  const inputs: LoanReliefInputs = {
+  const inputs: MultiPaymentInputs = {
     principal,
     annualRatePct: rate,
     tenureYears: tenure,
     emiOverride: emiTouched ? emiOverride : undefined,
     startYear,
     startMonth,
-    oneTimeAmount,
-    oneTimeAtMonth,
-    oneTimeMode,
+    possessionMonth,
+    partPayments,
     extraMonthly,
     extraStartMonth,
     stepUpEnabled,
     stepUpPct,
-    useOneTime,
-    useRecurring,
+    useRecurring: showRecurring && extraMonthly > 0,
   };
 
-  const result = React.useMemo(() => computeRelief(inputs), [
-    principal,
-    rate,
-    tenure,
-    emiOverride,
-    emiTouched,
-    startYear,
-    startMonth,
-    oneTimeAmount,
-    oneTimeAtMonth,
-    oneTimeMode,
-    extraMonthly,
-    extraStartMonth,
-    stepUpEnabled,
-    stepUpPct,
-    useOneTime,
-    useRecurring,
+  const result = React.useMemo(() => computeMultiPaymentRelief(inputs), [
+    principal, rate, tenure, emiOverride, emiTouched, startYear, startMonth,
+    possessionMonth, partPayments, extraMonthly, extraStartMonth, stepUpEnabled,
+    stepUpPct, showRecurring,
   ]);
 
-  // Sync EMI display when not overridden
   React.useEffect(() => {
     if (!emiTouched) setEmiOverride(Math.round(result.baseEmi));
   }, [result.baseEmi, emiTouched]);
 
   const chartData = React.useMemo(
-    () => buildChartData(result.baseline, result.withPrepay),
+    () => buildMultiChartData(result.baseline, result.withPayments, result.resolved, result.possessionMonth),
     [result],
   );
 
-  // Corpus connector — recompute with corpus prepay applied as additional one-time at month 1
-  const corpusUsedAmount = Math.round((corpusAvailable * corpusUsedPct) / 100);
-  const corpusInputs: LoanReliefInputs = {
-    ...inputs,
-    useOneTime: true,
-    oneTimeAmount: (useOneTime ? oneTimeAmount : 0) + corpusUsedAmount,
-    oneTimeAtMonth: useOneTime ? oneTimeAtMonth : 1,
-    oneTimeMode: oneTimeMode,
-  };
-  const corpusResult = React.useMemo(() => computeRelief(corpusInputs), [
-    principal,
-    rate,
-    tenure,
-    emiOverride,
-    emiTouched,
-    startYear,
-    startMonth,
-    oneTimeAmount,
-    oneTimeAtMonth,
-    oneTimeMode,
-    extraMonthly,
-    extraStartMonth,
-    stepUpEnabled,
-    stepUpPct,
-    useOneTime,
-    useRecurring,
-    corpusUsedAmount,
-  ]);
+  const activePayments = partPayments.filter((p) => p.amount > 0);
 
   // AI nudge
   const [nudge, setNudge] = React.useState<string | null>(null);
   const nudgeTimer = React.useRef<number | null>(null);
   React.useEffect(() => {
-    if (!user) return; // requires auth
-    if (principal <= 0 || (oneTimeAmount <= 0 && extraMonthly <= 0)) {
+    if (!user) return;
+    if (principal <= 0 || activePayments.length === 0) {
       setNudge(null);
       return;
     }
@@ -230,56 +212,51 @@ function LoanReliefPage() {
             tenureYears: tenure,
             baseEmi: result.baseEmi,
             baselineTotalInterest: result.baseline.totalInterest,
-            withPrepayTotalInterest: result.withPrepay.totalInterest,
+            withPrepayTotalInterest: result.withPayments.totalInterest,
             interestSaved: result.interestSaved,
             monthsSaved: result.monthsSaved,
-            oneTimeAmount: useOneTime ? oneTimeAmount : 0,
-            oneTimeAtMonth: useOneTime ? oneTimeAtMonth : 0,
-            extraMonthly: useRecurring ? extraMonthly : 0,
-            extraStartMonth: useRecurring ? extraStartMonth : 0,
+            partPayments: result.perPaymentImpact.map((p) => ({
+              label: p.label,
+              amount: p.amount,
+              month: p.month,
+              interestSaved: p.interestSaved,
+              monthsSaved: p.monthsSaved,
+            })),
+            extraMonthly: showRecurring ? extraMonthly : 0,
+            extraStartMonth: showRecurring ? extraStartMonth : 0,
             stepUpPct: stepUpEnabled ? stepUpPct : 0,
           }),
         });
-        if (!resp.ok) {
-          setNudge(null);
-          return;
-        }
+        if (!resp.ok) { setNudge(null); return; }
         const data = (await resp.json()) as { nudge?: string };
         setNudge(data.nudge ?? null);
       } catch {
         setNudge(null);
       }
     }, 1200);
-    return () => {
-      if (nudgeTimer.current) window.clearTimeout(nudgeTimer.current);
-    };
-  }, [
-    user,
-    principal,
-    rate,
-    tenure,
-    oneTimeAmount,
-    oneTimeAtMonth,
-    extraMonthly,
-    extraStartMonth,
-    stepUpEnabled,
-    stepUpPct,
-    useOneTime,
-    useRecurring,
-    result.interestSaved,
-    result.monthsSaved,
-    result.baseEmi,
-    result.baseline.totalInterest,
-    result.withPrepay.totalInterest,
-  ]);
+    return () => { if (nudgeTimer.current) window.clearTimeout(nudgeTimer.current); };
+  }, [user, principal, rate, tenure, activePayments.length, result.interestSaved, result.monthsSaved, result.baseEmi, showRecurring, extraMonthly]);
 
-  // Save scenario
+  const addPartPayment = () => {
+    if (partPayments.length >= MAX_PART_PAYMENTS) {
+      toast.error(`Maximum ${MAX_PART_PAYMENTS} part payments allowed.`);
+      return;
+    }
+    setPartPayments([...partPayments, createEmptyPartPayment()]);
+  };
+
+  const removePartPayment = (id: string) => {
+    setPartPayments(partPayments.filter((p) => p.id !== id));
+  };
+
+  const updatePartPayment = (id: string, patch: Partial<PartPayment>) => {
+    setPartPayments(partPayments.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  };
+
   const handleSave = () => {
     const list = listScenarios(user?.id ?? null);
     if (list.length >= MAX_SCENARIOS) {
-      toast.error(
-        `You've reached the maximum of ${MAX_SCENARIOS} scenarios. Delete one to save a new scenario.`,
-      );
+      toast.error(`You've reached the maximum of ${MAX_SCENARIOS} scenarios. Delete one to save a new scenario.`);
       return;
     }
     const home = {
@@ -297,10 +274,10 @@ function LoanReliefPage() {
       home,
       profile: defaultProfile,
       loanRelief: {
-        onetimePrepayment: useOneTime ? oneTimeAmount : 0,
-        totalInterest: result.withPrepay.totalInterest,
+        onetimePrepayment: activePayments.reduce((s, p) => s + p.amount, 0),
+        totalInterest: result.withPayments.totalInterest,
         interestSaved: result.interestSaved,
-        closureMonthsFromNow: result.withPrepay.monthsToClose,
+        closureMonthsFromNow: result.withPayments.monthsToClose,
         timeSavedMonths: result.monthsSaved,
       },
     });
@@ -310,6 +287,16 @@ function LoanReliefPage() {
   };
 
   const handleDownload = () => {
+    const ppLines = activePayments.length > 0
+      ? [
+          "Part payments:",
+          ...result.perPaymentImpact.map(
+            (p) => `  ${p.label}: ${formatINR(p.amount)} at month ${p.month} — saves ${formatINR(p.interestSaved)} interest, ${formatYearsMonths(p.monthsSaved)}`
+          ),
+          `  Total part payments: ${formatINR(activePayments.reduce((s, p) => s + p.amount, 0))}`,
+        ]
+      : ["Part payments: none"];
+
     const lines = [
       "HomeAfford — Loan Relief Scenario Summary",
       "(Illustrative scenario based on assumed rates)",
@@ -321,22 +308,19 @@ function LoanReliefPage() {
       `Monthly EMI: ${formatINR(result.baseEmi)}`,
       `Loan start: ${monthLabel(startYear, startMonth)}`,
       "",
-      "Without prepayment",
+      "Without part payments",
       `Total interest: ${formatINR(result.baseline.totalInterest)}`,
       `Total payable: ${formatINR(result.baseline.totalPaid)}`,
       `Loan closes: ${monthLabel(result.baseline.closureDate.year, result.baseline.closureDate.month)}`,
       "",
-      "Prepayment scenario",
-      useOneTime
-        ? `One-time prepayment: ${formatINR(oneTimeAmount)} at month ${oneTimeAtMonth} (${oneTimeMode === "reduce_emi" ? "reduce EMI" : "shorten tenure"})`
-        : "One-time prepayment: none",
-      useRecurring
-        ? `Extra monthly: ${formatINR(extraMonthly)} from month ${extraStartMonth}${stepUpEnabled ? `, +${stepUpPct}% per year` : ""}`
-        : "Extra monthly: none",
+      ...ppLines,
+      ...(showRecurring && extraMonthly > 0
+        ? [`Extra monthly: ${formatINR(extraMonthly)} from month ${extraStartMonth}${stepUpEnabled ? `, +${stepUpPct}% per year` : ""}`]
+        : []),
       "",
-      "With prepayment",
-      `Total interest: ${formatINR(result.withPrepay.totalInterest)}`,
-      `Loan closes: ${monthLabel(result.withPrepay.closureDate.year, result.withPrepay.closureDate.month)}`,
+      "With part payments",
+      `Total interest: ${formatINR(result.withPayments.totalInterest)}`,
+      `Loan closes: ${monthLabel(result.withPayments.closureDate.year, result.withPayments.closureDate.month)}`,
       `Interest saved: ${formatINR(result.interestSaved)}`,
       `Time saved: ${formatYearsMonths(result.monthsSaved)}`,
       "",
@@ -354,6 +338,9 @@ function LoanReliefPage() {
   const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
   const yearOptions = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 2 + i);
 
+  const beforePossessionPayments = activePayments.filter((p) => p.timing === "before_possession");
+  const beforePossessionTotal = beforePossessionPayments.reduce((s, p) => s + p.amount, 0);
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <SiteNav />
@@ -364,8 +351,7 @@ function LoanReliefPage() {
               Loan Relief Planner
             </h1>
             <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-              See how prepayments and extra contributions reduce your interest burden and close
-              your loan faster.
+              See how part payments reduce your interest burden and close your loan faster.
             </p>
             <p className="mt-2 text-xs text-muted-foreground">
               All numbers below are illustrative scenarios based on the rates and amounts you enter.
@@ -433,9 +419,7 @@ function LoanReliefPage() {
                     <button
                       type="button"
                       className="text-xs text-primary hover:underline"
-                      onClick={() => {
-                        setEmiTouched(false);
-                      }}
+                      onClick={() => setEmiTouched(false)}
                     >
                       Reset to calculated EMI
                     </button>
@@ -463,202 +447,218 @@ function LoanReliefPage() {
                       onChange={(e) => setStartYear(Number(e.target.value))}
                     >
                       {yearOptions.map((y) => (
-                        <option key={y} value={y}>
-                          {y}
-                        </option>
+                        <option key={y} value={y}>{y}</option>
                       ))}
                     </select>
                   </div>
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Possession / full disbursement month</Label>
+                  <span className="text-sm font-medium text-foreground">
+                    Month {possessionMonth} — {monthLabelFromOffset(startYear, startMonth, possessionMonth)}
+                  </span>
+                </div>
+                <Slider
+                  min={1}
+                  max={totalMonths}
+                  step={1}
+                  value={[possessionMonth]}
+                  onValueChange={(v) => setPossessionMonth(v[0] ?? possessionMonth)}
+                />
+              </div>
+
               <div className="rounded-xl border border-border bg-muted/40 p-4">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Without any prepayment
+                  Without any part payments
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <SummaryRow label="Your monthly EMI" value={formatINR(result.baseEmi)} />
-                  <SummaryRow
-                    label="Total amount payable"
-                    value={formatINR(result.baseline.totalPaid)}
-                  />
-                  <SummaryRow
-                    label="Total interest payable"
-                    value={formatINR(result.baseline.totalInterest)}
-                  />
+                  <SummaryRow label="Total amount payable" value={formatINR(result.baseline.totalPaid)} />
+                  <SummaryRow label="Total interest payable" value={formatINR(result.baseline.totalInterest)} />
                   <SummaryRow
                     label="Loan closes in"
-                    value={monthLabel(
-                      result.baseline.closureDate.year,
-                      result.baseline.closureDate.month,
+                    value={monthLabel(result.baseline.closureDate.year, result.baseline.closureDate.month)}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 2 — Part Payment Planner */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Plan Your Part Payments</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Add one or more part payments at any point — before or after possession — and see how
+                each one reduces your interest burden and closes your loan faster.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {partPayments.map((pp, idx) => (
+                <PartPaymentRow
+                  key={pp.id}
+                  payment={pp}
+                  index={idx}
+                  onChange={(patch) => updatePartPayment(pp.id, patch)}
+                  onRemove={() => removePartPayment(pp.id)}
+                  totalMonths={totalMonths}
+                  possessionMonth={possessionMonth}
+                  startYear={startYear}
+                  startMonth={startMonth}
+                />
+              ))}
+
+              {partPayments.length < MAX_PART_PAYMENTS && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full min-h-11"
+                  onClick={addPartPayment}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add another part payment
+                </Button>
+              )}
+
+              {partPayments.length === 0 && (
+                <div className="rounded-xl border border-dashed border-border p-6 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No part payments added yet. Tap the button above to simulate your first part payment.
+                  </p>
+                </div>
+              )}
+
+              {/* Before possession note */}
+              {beforePossessionPayments.length > 0 && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                  <p className="text-sm font-semibold text-foreground">
+                    At possession your outstanding loan will be {formatINR(beforePossessionTotal)} lower.
+                    {result.withPayments.points.length > 0 && (
+                      <> Your full EMI after possession reduces to {formatINR(result.withPayments.points.at(-1)?.emi ?? result.baseEmi)}.</>
                     )}
-                  />
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Making part payments during construction reduces your principal before full EMI
+                    even begins — this is one of the most effective ways to reduce total interest.
+                  </p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              )}
 
-          {/* Section 2 — Prepayment builder */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Now let&apos;s see what prepayments do</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <Tabs value={tab} onValueChange={(v) => setTab(v as "onetime" | "recurring")}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="onetime" disabled={combine}>
-                    One-Time Prepayment
-                  </TabsTrigger>
-                  <TabsTrigger value="recurring" disabled={combine}>
-                    Regular Extra Payment
-                  </TabsTrigger>
-                </TabsList>
-
-                <div className="mt-3 flex items-center gap-2">
-                  <Checkbox
-                    id="combine"
-                    checked={combine}
-                    onCheckedChange={(c) => setCombine(c === true)}
-                  />
-                  <Label htmlFor="combine" className="text-sm font-normal">
-                    Combine both
-                  </Label>
+              {/* Recurring extra section */}
+              <div className="border-t border-border pt-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold">Also add regular extra monthly payments?</Label>
+                  <Switch checked={showRecurring} onCheckedChange={setShowRecurring} />
                 </div>
-
-                {!combine && (
-                  <>
-                    <TabsContent value="onetime" className="mt-5 space-y-5">
-                      <OneTimeBlock
-                        oneTimeAmount={oneTimeAmount}
-                        setOneTimeAmount={setOneTimeAmount}
-                        oneTimeAtMonth={oneTimeAtMonth}
-                        setOneTimeAtMonth={setOneTimeAtMonth}
-                        oneTimeMode={oneTimeMode}
-                        setOneTimeMode={setOneTimeMode}
-                        totalMonths={totalMonths}
-                        startYear={startYear}
-                        startMonth={startMonth}
+                {showRecurring && (
+                  <div className="mt-4 space-y-4">
+                    <div className="space-y-2">
+                      <Label>Extra amount per month above regular EMI</Label>
+                      <CurrencyInput value={extraMonthly} onValueChange={setExtraMonthly} placeholder="0" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Starting from which month?</Label>
+                        <span className="text-sm font-medium text-foreground">
+                          Month {extraStartMonth} — {monthLabelFromOffset(startYear, startMonth, extraStartMonth)}
+                        </span>
+                      </div>
+                      <Slider
+                        min={1}
+                        max={totalMonths}
+                        step={1}
+                        value={[extraStartMonth]}
+                        onValueChange={(v) => setExtraStartMonth(v[0] ?? extraStartMonth)}
                       />
-                    </TabsContent>
-                    <TabsContent value="recurring" className="mt-5 space-y-5">
-                      <RecurringBlock
-                        extraMonthly={extraMonthly}
-                        setExtraMonthly={setExtraMonthly}
-                        extraStartMonth={extraStartMonth}
-                        setExtraStartMonth={setExtraStartMonth}
-                        stepUpEnabled={stepUpEnabled}
-                        setStepUpEnabled={setStepUpEnabled}
-                        stepUpPct={stepUpPct}
-                        setStepUpPct={setStepUpPct}
-                        totalMonths={totalMonths}
-                        startYear={startYear}
-                        startMonth={startMonth}
-                      />
-                    </TabsContent>
-                  </>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                      <div>
+                        <Label htmlFor="stepup" className="text-sm">Annual step-up on extra payment</Label>
+                        <p className="text-xs text-muted-foreground">Increase extra payment every year</p>
+                      </div>
+                      <Switch id="stepup" checked={stepUpEnabled} onCheckedChange={setStepUpEnabled} />
+                    </div>
+                    {stepUpEnabled && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Increase extra payment by</Label>
+                          <span className="text-sm font-medium text-foreground">{stepUpPct}% / year</span>
+                        </div>
+                        <Slider min={5} max={20} step={1} value={[stepUpPct]} onValueChange={(v) => setStepUpPct(v[0] ?? stepUpPct)} />
+                      </div>
+                    )}
+                  </div>
                 )}
-              </Tabs>
-
-              {combine && (
-                <div className="space-y-6">
-                  <div className="space-y-5">
-                    <p className="text-sm font-semibold text-foreground">One-time prepayment</p>
-                    <OneTimeBlock
-                      oneTimeAmount={oneTimeAmount}
-                      setOneTimeAmount={setOneTimeAmount}
-                      oneTimeAtMonth={oneTimeAtMonth}
-                      setOneTimeAtMonth={setOneTimeAtMonth}
-                      oneTimeMode={oneTimeMode}
-                      setOneTimeMode={setOneTimeMode}
-                      totalMonths={totalMonths}
-                      startYear={startYear}
-                      startMonth={startMonth}
-                    />
-                  </div>
-                  <div className="space-y-5 border-t border-border pt-5">
-                    <p className="text-sm font-semibold text-foreground">Regular extra payment</p>
-                    <RecurringBlock
-                      extraMonthly={extraMonthly}
-                      setExtraMonthly={setExtraMonthly}
-                      extraStartMonth={extraStartMonth}
-                      setExtraStartMonth={setExtraStartMonth}
-                      stepUpEnabled={stepUpEnabled}
-                      setStepUpEnabled={setStepUpEnabled}
-                      stepUpPct={stepUpPct}
-                      setStepUpPct={setStepUpPct}
-                      totalMonths={totalMonths}
-                      startYear={startYear}
-                      startMonth={startMonth}
-                    />
-                  </div>
-                </div>
-              )}
+              </div>
             </CardContent>
           </Card>
 
-          {/* Section 3 — Impact */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Impact of your prepayment scenario</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid gap-4 md:grid-cols-2">
-                <ComparisonPanel
-                  title="Without prepayment"
-                  monthlyEmi={result.baseEmi}
-                  totalInterest={result.baseline.totalInterest}
-                  closure={monthLabel(
-                    result.baseline.closureDate.year,
-                    result.baseline.closureDate.month,
-                  )}
-                />
-                <ComparisonPanel
-                  title="With prepayment"
-                  monthlyEmi={result.withPrepay.points.at(-1)?.emi ?? result.baseEmi}
-                  totalInterest={result.withPrepay.totalInterest}
-                  closure={monthLabel(
-                    result.withPrepay.closureDate.year,
-                    result.withPrepay.closureDate.month,
-                  )}
-                  extras={[
-                    {
-                      label: "Interest saved",
-                      value: formatINR(result.interestSaved),
-                      highlight: true,
-                    },
-                    {
-                      label: "Time saved",
-                      value: formatYearsMonths(result.monthsSaved),
-                      highlight: true,
-                    },
-                  ]}
-                />
-              </div>
-
-              {(result.interestSaved > 0 || result.monthsSaved > 0) && (
-                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
-                  <p className="text-base font-semibold text-foreground sm:text-lg">
-                    You save{" "}
-                    <span className="text-emerald-700 dark:text-emerald-400">
-                      {formatINR(result.interestSaved)}
-                    </span>{" "}
-                    in interest and close your loan{" "}
-                    <span className="text-emerald-700 dark:text-emerald-400">
-                      {formatYearsMonths(result.monthsSaved)}
-                    </span>{" "}
-                    earlier.
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Illustrative scenario based on the rates you entered.
-                  </p>
+          {/* Section 4 — Combined Impact Output */}
+          <div className="sticky top-20 z-10 mb-6">
+            <Card className="shadow-lg">
+              <CardContent className="py-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-xl border border-border bg-background p-4">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Without any part payments
+                    </p>
+                    <div className="space-y-2">
+                      <SummaryRow label="Total interest" value={formatINR(result.baseline.totalInterest)} />
+                      <SummaryRow label="Loan closes" value={monthLabel(result.baseline.closureDate.year, result.baseline.closureDate.month)} />
+                      <SummaryRow label="Monthly EMI" value={formatINR(result.baseEmi)} />
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border bg-background p-4">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      With your planned part payments
+                    </p>
+                    <div className="space-y-2">
+                      <HighlightRow label="Total interest" value={formatINR(result.withPayments.totalInterest)} highlight={result.interestSaved > 0} />
+                      <HighlightRow label="Interest saved" value={formatINR(result.interestSaved)} highlight bold />
+                      <HighlightRow
+                        label="Loan closes"
+                        value={monthLabel(result.withPayments.closureDate.year, result.withPayments.closureDate.month)}
+                        highlight={result.monthsSaved > 0}
+                      />
+                      <HighlightRow label="Time saved" value={formatYearsMonths(result.monthsSaved)} highlight bold />
+                      <HighlightRow
+                        label="EMI after payments"
+                        value={formatINR(result.withPayments.points.at(-1)?.emi ?? result.baseEmi)}
+                        highlight={result.hasReduceEmi}
+                      />
+                    </div>
+                  </div>
                 </div>
-              )}
 
-              <div>
-                <p className="mb-2 text-sm font-semibold text-foreground">
-                  Your loan balance over time
-                </p>
-                <div className="h-72 rounded-2xl border border-border bg-background p-3">
+                {activePayments.length > 0 && (result.interestSaved > 0 || result.monthsSaved > 0) && (
+                  <div className="mt-4 rounded-2xl border border-success/30 bg-success/10 p-4 text-center">
+                    <p className="text-base font-semibold text-foreground sm:text-lg">
+                      Your {activePayments.length} planned part payment{activePayments.length > 1 ? "s" : ""} save{" "}
+                      <span className="text-success font-extrabold">{formatINR(result.interestSaved)}</span> in
+                      interest and close your loan{" "}
+                      <span className="text-success font-extrabold">{formatYearsMonths(result.monthsSaved)}</span>{" "}
+                      earlier.
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Illustrative scenario based on the rates you entered.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Section 5 — Multi-line chart */}
+          {principal > 0 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-lg">Your loan balance over time</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-72 sm:h-80 rounded-2xl border border-border bg-background p-3">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
                       <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />
@@ -673,112 +673,129 @@ function LoanReliefPage() {
                         tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
                       />
                       <Tooltip
-                        formatter={(value) => formatINR(Number(value))}
+                        formatter={(value: number, name: string) => [formatINR(value), name]}
                         labelFormatter={(label) => `Month ${label}`}
                         contentStyle={{
                           background: "var(--color-card)",
                           borderColor: "var(--color-border)",
                           borderRadius: "12px",
+                          fontSize: "12px",
                         }}
                       />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
+                      {/* Possession line */}
+                      <ReferenceLine
+                        x={possessionMonth}
+                        stroke="var(--color-muted-foreground)"
+                        strokeDasharray="4 4"
+                        label={{ value: "Possession", position: "top", fontSize: 10, fill: "var(--color-muted-foreground)" }}
+                      />
+                      {/* Baseline */}
                       <Line
                         type="monotone"
                         dataKey="without"
-                        name="Without prepayment"
-                        stroke="var(--color-chart-3)"
+                        name="No part payments"
+                        stroke="var(--color-muted-foreground)"
                         strokeWidth={2}
+                        strokeDasharray="6 3"
                         dot={false}
                       />
+                      {/* With payments */}
                       <Line
                         type="monotone"
-                        dataKey="with"
-                        name="With prepayment"
+                        dataKey="withPayments"
+                        name="With part payments"
                         stroke="var(--color-chart-1)"
                         strokeWidth={3}
-                        dot={false}
+                        dot={(props: Record<string, unknown>) => {
+                          const { cx, cy, payload } = props as { cx: number; cy: number; payload: { paymentEvent?: { label: string } } };
+                          if (payload?.paymentEvent) {
+                            return (
+                              <circle
+                                key={`dot-${cx}`}
+                                cx={cx}
+                                cy={cy}
+                                r={5}
+                                fill="var(--color-chart-1)"
+                                stroke="var(--color-background)"
+                                strokeWidth={2}
+                              />
+                            );
+                          }
+                          return <circle key={`dot-${cx}`} cx={0} cy={0} r={0} fill="none" />;
+                        }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  The &quot;with prepayment&quot; line reaches zero in{" "}
-                  {monthLabel(
-                    result.withPrepay.closureDate.year,
-                    result.withPrepay.closureDate.month,
-                  )}
-                  .
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+                {result.withPayments.monthsToClose < result.baseline.monthsToClose && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Loan fully paid — {monthLabel(result.withPayments.closureDate.year, result.withPayments.closureDate.month)}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Section 4 — Corpus connector */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Using your corpus for prepayment</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                If you use part of your built corpus for a prepayment at possession, here is what
-                changes.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <Label>Corpus available at possession</Label>
-                <CurrencyInput
-                  value={corpusAvailable}
-                  onValueChange={setCorpusAvailable}
-                  placeholder="0"
-                />
-              </div>
+          {/* Section 6 — Per payment breakdown */}
+          {result.perPaymentImpact.length > 0 && (
+            <Card className="mb-6">
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">See impact of each payment individually</CardTitle>
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent>
+                    <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                      <table className="w-full min-w-[500px] text-sm">
+                        <thead>
+                          <tr className="border-b border-border text-left">
+                            <th className="pb-2 pr-4 font-semibold text-muted-foreground">Payment</th>
+                            <th className="pb-2 pr-4 font-semibold text-muted-foreground">Month</th>
+                            <th className="pb-2 pr-4 font-semibold text-muted-foreground">Amount</th>
+                            <th className="pb-2 pr-4 font-semibold text-muted-foreground">Interest saved</th>
+                            <th className="pb-2 font-semibold text-muted-foreground">Months saved</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {result.perPaymentImpact.map((p) => (
+                            <tr key={p.id} className="border-b border-border/50">
+                              <td className="py-2 pr-4 font-medium text-foreground">{p.label}</td>
+                              <td className="py-2 pr-4 text-muted-foreground">{p.month}</td>
+                              <td className="py-2 pr-4 font-medium text-foreground">{formatINR(p.amount)}</td>
+                              <td className="py-2 pr-4 font-semibold text-success">{formatINR(p.interestSaved)}</td>
+                              <td className="py-2 font-semibold text-success">{formatYearsMonths(p.monthsSaved)}</td>
+                            </tr>
+                          ))}
+                          {result.perPaymentImpact.length > 1 && (
+                            <tr className="font-extrabold">
+                              <td className="py-2 pr-4 text-foreground">Total (combined)</td>
+                              <td className="py-2 pr-4" />
+                              <td className="py-2 pr-4 text-foreground">
+                                {formatINR(result.perPaymentImpact.reduce((s, p) => s + p.amount, 0))}
+                              </td>
+                              <td className="py-2 pr-4 text-success">{formatINR(result.interestSaved)}</td>
+                              <td className="py-2 text-success">{formatYearsMonths(result.monthsSaved)}</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Earlier payments always save more interest than later ones of the same amount.
+                    </p>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+          )}
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>How much of corpus to use for prepayment?</Label>
-                  <span className="text-sm font-medium text-foreground">{corpusUsedPct}%</span>
-                </div>
-                <Slider
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={[corpusUsedPct]}
-                  onValueChange={(v) => setCorpusUsedPct(v[0] ?? corpusUsedPct)}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Using {formatINR(corpusUsedAmount)} for prepayment, keeping{" "}
-                  {formatINR(Math.max(0, corpusAvailable - corpusUsedAmount))} for other needs.
-                </p>
-              </div>
-
-              <div className="grid gap-3 rounded-xl border border-border bg-muted/40 p-4 sm:grid-cols-2">
-                <SummaryRow
-                  label="Updated interest saved"
-                  value={formatINR(corpusResult.interestSaved)}
-                />
-                <SummaryRow
-                  label="Updated loan closure"
-                  value={monthLabel(
-                    corpusResult.withPrepay.closureDate.year,
-                    corpusResult.withPrepay.closureDate.month,
-                  )}
-                />
-                <SummaryRow
-                  label="Remaining corpus after prepayment"
-                  value={formatINR(Math.max(0, corpusAvailable - corpusUsedAmount))}
-                />
-                <SummaryRow
-                  label="Time saved (illustrative)"
-                  value={formatYearsMonths(corpusResult.monthsSaved)}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                The remaining {formatINR(Math.max(0, corpusAvailable - corpusUsedAmount))} corpus
-                can continue generating monthly withdrawals to support your EMI.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Section 5 — AI nudge */}
+          {/* Section 7 — AI nudge */}
           {nudge && (
             <Card className="mb-6 border-primary/30 bg-primary/5">
               <CardContent className="py-4">
@@ -790,7 +807,7 @@ function LoanReliefPage() {
             </Card>
           )}
 
-          {/* Section 6 — Save / Download */}
+          {/* Section 9 — Save / Download */}
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button onClick={handleSave} className="min-h-11 sm:flex-1">
               Save this scenario
@@ -820,109 +837,143 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ComparisonPanel({
-  title,
-  monthlyEmi,
-  totalInterest,
-  closure,
-  extras,
-}: {
-  title: string;
-  monthlyEmi: number;
-  totalInterest: number;
-  closure: string;
-  extras?: Array<{ label: string; value: string; highlight?: boolean }>;
-}) {
+function HighlightRow({ label, value, highlight, bold }: { label: string; value: string; highlight?: boolean; bold?: boolean }) {
   return (
-    <div className="rounded-2xl border border-border bg-background p-4">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
-      </p>
-      <div className="space-y-2">
-        <SummaryRow label="Monthly EMI" value={formatINR(monthlyEmi)} />
-        <SummaryRow label="Total interest" value={formatINR(totalInterest)} />
-        <SummaryRow label="Loan closes" value={closure} />
-        {extras?.map((e) => (
-          <div key={e.label} className="flex items-baseline justify-between gap-3">
-            <span className="text-sm text-muted-foreground">{e.label}</span>
-            <span
-              className={
-                e.highlight
-                  ? "text-sm font-extrabold text-emerald-700 dark:text-emerald-400"
-                  : "text-sm font-semibold text-foreground"
-              }
-            >
-              {e.value}
-            </span>
-          </div>
-        ))}
-      </div>
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span
+        className={cn(
+          "text-sm font-semibold",
+          highlight ? "text-success" : "text-foreground",
+          bold && "font-extrabold",
+        )}
+      >
+        {value}
+      </span>
     </div>
   );
 }
 
-function OneTimeBlock(props: {
-  oneTimeAmount: number;
-  setOneTimeAmount: (n: number) => void;
-  oneTimeAtMonth: number;
-  setOneTimeAtMonth: (n: number) => void;
-  oneTimeMode: PrepayMode;
-  setOneTimeMode: (m: PrepayMode) => void;
+function PartPaymentRow({
+  payment,
+  index,
+  onChange,
+  onRemove,
+  totalMonths,
+  possessionMonth,
+  startYear,
+  startMonth,
+}: {
+  payment: PartPayment;
+  index: number;
+  onChange: (patch: Partial<PartPayment>) => void;
+  onRemove: () => void;
   totalMonths: number;
+  possessionMonth: number;
   startYear: number;
   startMonth: number;
 }) {
-  const {
-    oneTimeAmount,
-    setOneTimeAmount,
-    oneTimeAtMonth,
-    setOneTimeAtMonth,
-    oneTimeMode,
-    setOneTimeMode,
-    totalMonths,
-    startYear,
-    startMonth,
-  } = props;
-  const monthDate = new Date(startYear, startMonth - 1 + (oneTimeAtMonth - 1), 1);
+  const maxMonth =
+    payment.timing === "before_possession"
+      ? Math.max(1, possessionMonth)
+      : Math.max(1, totalMonths - possessionMonth);
+
+  const displayMonth =
+    payment.timing === "before_possession"
+      ? monthLabelFromOffset(startYear, startMonth, payment.month)
+      : monthLabelFromOffset(startYear, startMonth, possessionMonth + payment.month);
+
   return (
-    <div className="space-y-5">
-      <div className="space-y-2">
-        <Label>Prepayment amount</Label>
-        <CurrencyInput value={oneTimeAmount} onValueChange={setOneTimeAmount} placeholder="0" />
+    <div className="rounded-2xl border border-border bg-muted/25 p-4 space-y-4">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold text-foreground">Part payment {index + 1}</p>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="rounded-full p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          aria-label="Remove this part payment"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Payment label</Label>
+          <Input
+            type="text"
+            value={payment.label}
+            onChange={(e) => onChange({ label: e.target.value })}
+            placeholder='e.g. "Bonus", "Matured FD", "Corpus at possession"'
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Payment amount (₹)</Label>
+          <CurrencyInput
+            value={payment.amount}
+            onValueChange={(n) => onChange({ amount: n })}
+            placeholder="0"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Payment timing</Label>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            variant={payment.timing === "before_possession" ? "default" : "outline"}
+            className="min-h-11 text-xs sm:text-sm"
+            onClick={() => onChange({ timing: "before_possession", month: 1 })}
+          >
+            Before possession
+          </Button>
+          <Button
+            type="button"
+            variant={payment.timing === "after_possession" ? "default" : "outline"}
+            className="min-h-11 text-xs sm:text-sm"
+            onClick={() => onChange({ timing: "after_possession", month: 1 })}
+          >
+            After possession
+          </Button>
+        </div>
+      </div>
+
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label>At which month do you plan to prepay?</Label>
-          <span className="text-sm font-medium text-foreground">
-            Month {oneTimeAtMonth} —{" "}
-            {monthDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
-          </span>
+          <Label>
+            {payment.timing === "before_possession"
+              ? `Month ${payment.month}`
+              : `Month ${payment.month} after possession`}
+          </Label>
+          <span className="text-sm font-medium text-foreground">{displayMonth}</span>
         </div>
         <Slider
           min={1}
-          max={totalMonths}
+          max={maxMonth}
           step={1}
-          value={[oneTimeAtMonth]}
-          onValueChange={(v) => setOneTimeAtMonth(v[0] ?? oneTimeAtMonth)}
+          value={[Math.min(payment.month, maxMonth)]}
+          onValueChange={(v) => onChange({ month: v[0] ?? 1 })}
         />
       </div>
+
       <div className="space-y-2">
-        <Label>After prepayment, what do you prefer?</Label>
+        <Label>After this payment, I prefer:</Label>
         <RadioGroup
-          value={oneTimeMode}
-          onValueChange={(v) => setOneTimeMode(v as PrepayMode)}
+          value={payment.mode}
+          onValueChange={(v) => onChange({ mode: v as PrepayMode })}
           className="gap-3"
         >
           <div className="flex items-start gap-2">
-            <RadioGroupItem value="reduce_emi" id="reduce" className="mt-1" />
-            <Label htmlFor="reduce" className="text-sm font-normal">
-              Reduce my EMI (keep same tenure, lower monthly payment)
+            <RadioGroupItem value="reduce_emi" id={`reduce-${payment.id}`} className="mt-1" />
+            <Label htmlFor={`reduce-${payment.id}`} className="text-sm font-normal">
+              Reduce my EMI (same tenure, lower monthly payment)
             </Label>
           </div>
           <div className="flex items-start gap-2">
-            <RadioGroupItem value="shorten_tenure" id="shorten" className="mt-1" />
-            <Label htmlFor="shorten" className="text-sm font-normal">
-              Close loan faster (keep same EMI, shorter tenure)
+            <RadioGroupItem value="shorten_tenure" id={`shorten-${payment.id}`} className="mt-1" />
+            <Label htmlFor={`shorten-${payment.id}`} className="text-sm font-normal">
+              Close loan faster (same EMI, shorter tenure)
             </Label>
           </div>
         </RadioGroup>
@@ -931,79 +982,4 @@ function OneTimeBlock(props: {
   );
 }
 
-function RecurringBlock(props: {
-  extraMonthly: number;
-  setExtraMonthly: (n: number) => void;
-  extraStartMonth: number;
-  setExtraStartMonth: (n: number) => void;
-  stepUpEnabled: boolean;
-  setStepUpEnabled: (b: boolean) => void;
-  stepUpPct: number;
-  setStepUpPct: (n: number) => void;
-  totalMonths: number;
-  startYear: number;
-  startMonth: number;
-}) {
-  const {
-    extraMonthly,
-    setExtraMonthly,
-    extraStartMonth,
-    setExtraStartMonth,
-    stepUpEnabled,
-    setStepUpEnabled,
-    stepUpPct,
-    setStepUpPct,
-    totalMonths,
-    startYear,
-    startMonth,
-  } = props;
-  const monthDate = new Date(startYear, startMonth - 1 + (extraStartMonth - 1), 1);
-  return (
-    <div className="space-y-5">
-      <div className="space-y-2">
-        <Label>Extra amount per month above regular EMI</Label>
-        <CurrencyInput value={extraMonthly} onValueChange={setExtraMonthly} placeholder="0" />
-      </div>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Starting from which month?</Label>
-          <span className="text-sm font-medium text-foreground">
-            Month {extraStartMonth} —{" "}
-            {monthDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
-          </span>
-        </div>
-        <Slider
-          min={1}
-          max={totalMonths}
-          step={1}
-          value={[extraStartMonth]}
-          onValueChange={(v) => setExtraStartMonth(v[0] ?? extraStartMonth)}
-        />
-      </div>
-      <div className="flex items-center justify-between rounded-lg border border-border p-3">
-        <div>
-          <Label htmlFor="stepup" className="text-sm">
-            Annual step-up on extra payment
-          </Label>
-          <p className="text-xs text-muted-foreground">Increase extra payment every year</p>
-        </div>
-        <Switch id="stepup" checked={stepUpEnabled} onCheckedChange={setStepUpEnabled} />
-      </div>
-      {stepUpEnabled && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label>Increase extra payment by</Label>
-            <span className="text-sm font-medium text-foreground">{stepUpPct}% / year</span>
-          </div>
-          <Slider
-            min={5}
-            max={20}
-            step={1}
-            value={[stepUpPct]}
-            onValueChange={(v) => setStepUpPct(v[0] ?? stepUpPct)}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
+export default LoanReliefPage;
