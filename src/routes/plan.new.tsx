@@ -9,6 +9,7 @@ import { WizardProgress } from "@/components/plan/WizardProgress";
 import { Step1Finances } from "@/components/plan/Step1Finances";
 import { StepCurrentInvestments } from "@/components/plan/StepCurrentInvestments";
 import { Step2Home } from "@/components/plan/Step2Home";
+import { StepPaymentPlan } from "@/components/plan/StepPaymentPlan";
 import { StepLoan } from "@/components/plan/StepLoan";
 import { Step3Profile } from "@/components/plan/Step3Profile";
 import { Step4Plan } from "@/components/plan/Step4Plan";
