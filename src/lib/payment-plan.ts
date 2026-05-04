@@ -191,7 +191,7 @@ export function computeFullEmiComparison(
     principalAtPossessionPreEmi: loanAmount,
     principalAtPossessionFullEmi,
     totalInterestPreEmi,
-    totalInterestFullEmi,
+    totalInterestFullEmi: totalInterestFull,
     interestSaved: totalInterestPreEmi - totalInterestFull,
   };
 }
