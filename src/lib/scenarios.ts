@@ -155,6 +155,9 @@ export function buildSnapshot(args: {
       verdict: plan.verdict,
       affordabilityLabel: affordabilityLabel(plan.verdict),
       safetyBuffer: plan.emergencyStatus === "Protected" ? "Built" : "Not built",
+      paymentPlanType: args.paymentPlan?.planType
+        ? paymentPlanLabels[args.paymentPlan.planType]
+        : undefined,
     },
   };
 }
