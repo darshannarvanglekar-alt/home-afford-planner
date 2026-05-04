@@ -15,6 +15,7 @@ import {
   type Home,
   type Profile,
 } from "@/lib/plan-schema";
+import { type PaymentPlanInputs, paymentPlanLabels } from "@/lib/payment-plan";
 
 export const MAX_SCENARIOS = 10;
 
@@ -28,6 +29,7 @@ export type SavedScenario = {
     investments: CurrentInvestment[];
     home: Home;
     profile: Profile;
+    paymentPlan?: PaymentPlanInputs;
   };
   // Optional planner extras: corpus builder + loan relief snapshots
   corpus?: {
@@ -63,6 +65,7 @@ export type SavedScenario = {
     verdict: AffordabilityVerdict;
     affordabilityLabel: "Comfortable" | "Stretch" | "Not Yet";
     safetyBuffer: "Built" | "Not built";
+    paymentPlanType?: string;
   };
 };
 
@@ -108,6 +111,7 @@ export function buildSnapshot(args: {
   investments: CurrentInvestment[];
   home: Home;
   profile: Profile;
+  paymentPlan?: PaymentPlanInputs;
   corpus?: SavedScenario["corpus"];
   loanRelief?: SavedScenario["loanRelief"];
   safetyAllocation?: number;
@@ -129,7 +133,7 @@ export function buildSnapshot(args: {
     name: args.name.trim() || "Untitled scenario",
     savedAt: new Date().toISOString(),
     preferred: args.preferred,
-    inputs: { finances, investments, home, profile },
+    inputs: { finances, investments, home, profile, paymentPlan: args.paymentPlan },
     corpus: args.corpus,
     loanRelief: args.loanRelief,
     safetyAllocation: args.safetyAllocation,
@@ -151,6 +155,9 @@ export function buildSnapshot(args: {
       verdict: plan.verdict,
       affordabilityLabel: affordabilityLabel(plan.verdict),
       safetyBuffer: plan.emergencyStatus === "Protected" ? "Built" : "Not built",
+      paymentPlanType: args.paymentPlan?.planType
+        ? paymentPlanLabels[args.paymentPlan.planType]
+        : undefined,
     },
   };
 }

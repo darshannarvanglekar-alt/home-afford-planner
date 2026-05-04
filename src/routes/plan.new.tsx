@@ -9,6 +9,7 @@ import { WizardProgress } from "@/components/plan/WizardProgress";
 import { Step1Finances } from "@/components/plan/Step1Finances";
 import { StepCurrentInvestments } from "@/components/plan/StepCurrentInvestments";
 import { Step2Home } from "@/components/plan/Step2Home";
+import { StepPaymentPlan } from "@/components/plan/StepPaymentPlan";
 import { StepLoan } from "@/components/plan/StepLoan";
 import { Step3Profile } from "@/components/plan/Step3Profile";
 import { Step4Plan } from "@/components/plan/Step4Plan";
@@ -31,11 +32,15 @@ import {
   type Home,
   type Profile,
 } from "@/lib/plan-schema";
+import {
+  type PaymentPlanInputs,
+  defaultPaymentPlanInputs,
+} from "@/lib/payment-plan";
 import { suggestPlanName } from "@/lib/plan-display";
 import { takePendingLoad } from "@/lib/scenarios";
 
 const searchSchema = z.object({
-  step: fallback(z.number().int().min(1).max(6), 1).default(1),
+  step: fallback(z.number().int().min(1).max(7), 1).default(1),
   planId: fallback(z.string().uuid().optional(), undefined),
 });
 
@@ -58,6 +63,7 @@ function PlanWizardPage() {
   const [finances, setFinances] = React.useState<Finances>(defaultFinances);
   const [investments, setInvestments] = React.useState<CurrentInvestment[]>([]);
   const [home, setHome] = React.useState<Home>(defaultHome);
+  const [paymentPlan, setPaymentPlan] = React.useState<PaymentPlanInputs>(defaultPaymentPlanInputs);
   const [profile, setProfile] = React.useState<Profile>(defaultProfile);
   const [planName, setPlanName] = React.useState("");
   const [planReady, setPlanReady] = React.useState(false);
@@ -174,7 +180,7 @@ function PlanWizardPage() {
         planName.trim() && planName !== "Untitled plan" ? planName : suggestPlanName(home);
       const { error } = await supabase
         .from("plans")
-        .update({ name: nextName, data: { finances, investments, home, profile } })
+        .update({ name: nextName, data: JSON.parse(JSON.stringify({ finances, investments, home, profile, paymentPlan })) })
         .eq("id", planId);
       if (error) {
         setSaveState("idle");
@@ -190,7 +196,7 @@ function PlanWizardPage() {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [finances, investments, home, profile, planId, planName, planReady]);
+  }, [finances, investments, home, profile, paymentPlan, planId, planName, planReady]);
 
   const updatePlanName = async (name: string) => {
     if (!planId) return;
@@ -233,7 +239,7 @@ function PlanWizardPage() {
         return (toast.error("Please enter the property cost to continue"), false);
       }
     }
-    if (step === 4) {
+    if (step === 5) {
       if (home.downPayment > home.propertyCost) {
         setValidationError("Down Payment cannot exceed Property Cost.");
         return (toast.error("Down payment cannot exceed property cost"), false);
@@ -294,7 +300,7 @@ function PlanWizardPage() {
       setCalculating(true);
       window.setTimeout(() => {
         setCalculating(false);
-        goToStep(6);
+        goToStep(7);
       }, 2300);
     } catch (error) {
       console.error("Calculate My Plan failed", error);
@@ -352,10 +358,12 @@ function PlanWizardPage() {
               onUpgradeRequired={requestUpgrade}
             />
           ) : step === 4 ? (
-            <StepLoan value={home} onChange={setHome} />
+            <StepPaymentPlan value={paymentPlan} onChange={setPaymentPlan} home={home} />
           ) : step === 5 ? (
-            <Step3Profile value={profile} onChange={setProfile} />
+            <StepLoan value={home} onChange={setHome} />
           ) : step === 6 ? (
+            <Step3Profile value={profile} onChange={setProfile} />
+          ) : step === 7 ? (
             <Step4Plan
               finances={finances}
               investments={investments}
@@ -394,17 +402,17 @@ function PlanWizardPage() {
               )}
             </Button>
 
-            {step < 6 ? (
+            {step < 7 ? (
               <div className="flex flex-col items-stretch gap-2 sm:items-end">
                 {validationError ? (
                   <p className="text-sm font-medium text-destructive">{validationError}</p>
                 ) : null}
                 <Button
                   size="lg"
-                  className={step === 5 ? "h-12 px-8 text-base font-semibold" : undefined}
+                  className={step === 6 ? "h-12 px-8 text-base font-semibold" : undefined}
                   onClick={() => {
                     if (!validateStep()) return;
-                    if (step === 5) {
+                    if (step === 6) {
                       calculatePlan();
                     } else {
                       goToStep(step + 1);
@@ -416,10 +424,12 @@ function PlanWizardPage() {
                     : step === 2
                       ? "Next: Your Home"
                       : step === 3
-                        ? "Next: Your Loan"
+                        ? "Next: Payment Plan"
                         : step === 4
-                          ? "Next: Your Profile"
-                          : "Calculate My Plan"}
+                          ? "Next: Your Loan"
+                          : step === 5
+                            ? "Next: Your Profile"
+                            : "Calculate My Plan"}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -506,8 +516,9 @@ function ComingSoon({ step }: { step: number }) {
   const titles: Record<number, string> = {
     2: "My Current Investments",
     3: "Your Home",
-    4: "Your Profile",
-    5: "Your Plan",
+    4: "Payment Plan",
+    5: "Your Loan",
+    6: "Your Profile",
   };
   return (
     <div className="rounded-2xl border border-dashed border-border bg-card/50 p-12 text-center">
