@@ -180,7 +180,7 @@ function PlanWizardPage() {
         planName.trim() && planName !== "Untitled plan" ? planName : suggestPlanName(home);
       const { error } = await supabase
         .from("plans")
-        .update({ name: nextName, data: { finances, investments, home, profile, paymentPlan } })
+        .update({ name: nextName, data: { finances, investments, home, profile, paymentPlan: paymentPlan as unknown as Record<string, unknown> } })
         .eq("id", planId);
       if (error) {
         setSaveState("idle");
