@@ -402,17 +402,17 @@ function PlanWizardPage() {
               )}
             </Button>
 
-            {step < 6 ? (
+            {step < 7 ? (
               <div className="flex flex-col items-stretch gap-2 sm:items-end">
                 {validationError ? (
                   <p className="text-sm font-medium text-destructive">{validationError}</p>
                 ) : null}
                 <Button
                   size="lg"
-                  className={step === 5 ? "h-12 px-8 text-base font-semibold" : undefined}
+                  className={step === 6 ? "h-12 px-8 text-base font-semibold" : undefined}
                   onClick={() => {
                     if (!validateStep()) return;
-                    if (step === 5) {
+                    if (step === 6) {
                       calculatePlan();
                     } else {
                       goToStep(step + 1);
@@ -424,10 +424,12 @@ function PlanWizardPage() {
                     : step === 2
                       ? "Next: Your Home"
                       : step === 3
-                        ? "Next: Your Loan"
+                        ? "Next: Payment Plan"
                         : step === 4
-                          ? "Next: Your Profile"
-                          : "Calculate My Plan"}
+                          ? "Next: Your Loan"
+                          : step === 5
+                            ? "Next: Your Profile"
+                            : "Calculate My Plan"}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
