@@ -29,6 +29,7 @@ export type SavedScenario = {
     investments: CurrentInvestment[];
     home: Home;
     profile: Profile;
+    paymentPlan?: PaymentPlanInputs;
   };
   // Optional planner extras: corpus builder + loan relief snapshots
   corpus?: {
