@@ -65,6 +65,7 @@ export type SavedScenario = {
     verdict: AffordabilityVerdict;
     affordabilityLabel: "Comfortable" | "Stretch" | "Not Yet";
     safetyBuffer: "Built" | "Not built";
+    paymentPlanType?: string;
   };
 };
 
