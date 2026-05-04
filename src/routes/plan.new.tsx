@@ -300,7 +300,7 @@ function PlanWizardPage() {
       setCalculating(true);
       window.setTimeout(() => {
         setCalculating(false);
-        goToStep(6);
+        goToStep(7);
       }, 2300);
     } catch (error) {
       console.error("Calculate My Plan failed", error);
