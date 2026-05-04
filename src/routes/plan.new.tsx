@@ -516,8 +516,9 @@ function ComingSoon({ step }: { step: number }) {
   const titles: Record<number, string> = {
     2: "My Current Investments",
     3: "Your Home",
-    4: "Your Profile",
-    5: "Your Plan",
+    4: "Payment Plan",
+    5: "Your Loan",
+    6: "Your Profile",
   };
   return (
     <div className="rounded-2xl border border-dashed border-border bg-card/50 p-12 text-center">
