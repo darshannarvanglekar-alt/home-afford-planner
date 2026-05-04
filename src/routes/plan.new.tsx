@@ -239,7 +239,7 @@ function PlanWizardPage() {
         return (toast.error("Please enter the property cost to continue"), false);
       }
     }
-    if (step === 4) {
+    if (step === 5) {
       if (home.downPayment > home.propertyCost) {
         setValidationError("Down Payment cannot exceed Property Cost.");
         return (toast.error("Down payment cannot exceed property cost"), false);
