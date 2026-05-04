@@ -32,6 +32,10 @@ import {
   type Home,
   type Profile,
 } from "@/lib/plan-schema";
+import {
+  type PaymentPlanInputs,
+  defaultPaymentPlanInputs,
+} from "@/lib/payment-plan";
 import { suggestPlanName } from "@/lib/plan-display";
 import { takePendingLoad } from "@/lib/scenarios";
 
