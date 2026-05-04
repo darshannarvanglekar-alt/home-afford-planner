@@ -133,7 +133,7 @@ export function buildSnapshot(args: {
     name: args.name.trim() || "Untitled scenario",
     savedAt: new Date().toISOString(),
     preferred: args.preferred,
-    inputs: { finances, investments, home, profile },
+    inputs: { finances, investments, home, profile, paymentPlan: args.paymentPlan },
     corpus: args.corpus,
     loanRelief: args.loanRelief,
     safetyAllocation: args.safetyAllocation,
