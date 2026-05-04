@@ -63,6 +63,7 @@ function PlanWizardPage() {
   const [finances, setFinances] = React.useState<Finances>(defaultFinances);
   const [investments, setInvestments] = React.useState<CurrentInvestment[]>([]);
   const [home, setHome] = React.useState<Home>(defaultHome);
+  const [paymentPlan, setPaymentPlan] = React.useState<PaymentPlanInputs>(defaultPaymentPlanInputs);
   const [profile, setProfile] = React.useState<Profile>(defaultProfile);
   const [planName, setPlanName] = React.useState("");
   const [planReady, setPlanReady] = React.useState(false);
