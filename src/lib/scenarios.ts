@@ -111,6 +111,7 @@ export function buildSnapshot(args: {
   investments: CurrentInvestment[];
   home: Home;
   profile: Profile;
+  paymentPlan?: PaymentPlanInputs;
   corpus?: SavedScenario["corpus"];
   loanRelief?: SavedScenario["loanRelief"];
   safetyAllocation?: number;
