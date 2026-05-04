@@ -196,7 +196,7 @@ function PlanWizardPage() {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [finances, investments, home, profile, planId, planName, planReady]);
+  }, [finances, investments, home, profile, paymentPlan, planId, planName, planReady]);
 
   const updatePlanName = async (name: string) => {
     if (!planId) return;
