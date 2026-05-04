@@ -15,6 +15,7 @@ import {
   type Home,
   type Profile,
 } from "@/lib/plan-schema";
+import { type PaymentPlanInputs, paymentPlanLabels } from "@/lib/payment-plan";
 
 export const MAX_SCENARIOS = 10;
 
