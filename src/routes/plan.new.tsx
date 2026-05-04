@@ -358,10 +358,12 @@ function PlanWizardPage() {
               onUpgradeRequired={requestUpgrade}
             />
           ) : step === 4 ? (
-            <StepLoan value={home} onChange={setHome} />
+            <StepPaymentPlan value={paymentPlan} onChange={setPaymentPlan} home={home} />
           ) : step === 5 ? (
-            <Step3Profile value={profile} onChange={setProfile} />
+            <StepLoan value={home} onChange={setHome} />
           ) : step === 6 ? (
+            <Step3Profile value={profile} onChange={setProfile} />
+          ) : step === 7 ? (
             <Step4Plan
               finances={finances}
               investments={investments}
