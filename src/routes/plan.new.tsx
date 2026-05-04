@@ -40,7 +40,7 @@ import { suggestPlanName } from "@/lib/plan-display";
 import { takePendingLoad } from "@/lib/scenarios";
 
 const searchSchema = z.object({
-  step: fallback(z.number().int().min(1).max(6), 1).default(1),
+  step: fallback(z.number().int().min(1).max(7), 1).default(1),
   planId: fallback(z.string().uuid().optional(), undefined),
 });
 
