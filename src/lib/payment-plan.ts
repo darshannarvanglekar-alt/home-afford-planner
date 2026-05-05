@@ -1,5 +1,5 @@
 // Payment plan types and calculation helpers for under-construction properties.
-// Plans 1–5 as specified. Plans 6–9 reserved for future.
+// Plans 1–9 as specified.
 
 import { calcEMI, formatINR } from "./plan-schema";
 
@@ -9,6 +9,10 @@ export const PAYMENT_PLAN_TYPES = [
   "subvention",
   "fixed_emi_accumulated",
   "emi_holiday",
+  "step_up_emi",
+  "step_down_emi",
+  "possession_date_start",
+  "custom_plan",
 ] as const;
 export type PaymentPlanType = (typeof PAYMENT_PLAN_TYPES)[number];
 
@@ -18,6 +22,10 @@ export const paymentPlanLabels: Record<PaymentPlanType, string> = {
   subvention: "Subvention Scheme",
   fixed_emi_accumulated: "Fixed EMI with Accumulated Difference",
   emi_holiday: "EMI Holiday / Moratorium",
+  step_up_emi: "Step-Up EMI",
+  step_down_emi: "Step-Down EMI",
+  possession_date_start: "Possession-Date EMI Start",
+  custom_plan: "Custom Plan",
 };
 
 export interface Tranche {
@@ -25,6 +33,65 @@ export interface Tranche {
   label: string;
   month: number; // months from today
   amount: number; // ₹
+}
+
+// ── Plan 6 — Step-Up EMI ──
+export interface StepUpConfig {
+  startingEmi: number;
+  stepType: "fixed" | "percentage";
+  stepAmount: number; // ₹ or %
+  stepFrequencyYears: 1 | 2 | 3;
+  stepPeriods: number; // 1-10
+}
+
+// ── Plan 7 — Step-Down EMI ──
+export interface StepDownConfig {
+  startingEmi: number;
+  stepType: "fixed" | "percentage";
+  stepAmount: number;
+  stepFrequencyYears: 1 | 2 | 3;
+  stepPeriods: number;
+}
+
+// ── Plan 8 — Possession-Date EMI Start ──
+export interface PossessionStartConfig {
+  accruedAction: "add_to_principal" | "lump_sum";
+}
+
+// ── Plan 9 — Custom Plan ──
+export interface CustomMilestone {
+  id: string;
+  fromMonth: number;
+  amount: number;
+}
+export interface CustomChangePoint {
+  id: string;
+  fromMonthAfterPossession: number;
+  newEmi: number;
+}
+export interface CustomPlanConfig {
+  // Phase A
+  phaseAType: "fixed" | "milestone";
+  phaseAFixedAmount: number;
+  phaseAMilestones: CustomMilestone[];
+  phaseAThirdPartyPays: boolean;
+  phaseAThirdPartyLabel: string;
+  phaseAThirdPartyAmount: number;
+  phaseAThirdPartyFromMonth: number;
+  phaseAThirdPartyToMonth: number;
+  // Phase B
+  phaseBLumpSum: boolean;
+  phaseBLumpSumAmount: number;
+  phaseBLumpSumLabel: string;
+  phaseBAddToPrincipal: boolean;
+  phaseBAddAmount: number;
+  // Phase C
+  phaseCAutoEmi: boolean;
+  phaseCManualEmi: number;
+  phaseCChanges: boolean;
+  phaseCChangeType: "increase_pct" | "decrease_pct" | "custom";
+  phaseCChangePct: number;
+  phaseCChangePoints: CustomChangePoint[];
 }
 
 export interface PaymentPlanInputs {
@@ -47,11 +114,65 @@ export interface PaymentPlanInputs {
   // Plan 5: EMI holiday
   holidayMonths: number;
 
+  // Plan 6
+  stepUp: StepUpConfig;
+
+  // Plan 7
+  stepDown: StepDownConfig;
+
+  // Plan 8
+  possessionStart: PossessionStartConfig;
+
+  // Plan 9
+  customPlan: CustomPlanConfig;
+
   // Shared
   loanAmount: number;
   tenureYears: number;
   possessionMonth: number;
 }
+
+export const defaultStepUpConfig: StepUpConfig = {
+  startingEmi: 0,
+  stepType: "fixed",
+  stepAmount: 5000,
+  stepFrequencyYears: 1,
+  stepPeriods: 5,
+};
+
+export const defaultStepDownConfig: StepDownConfig = {
+  startingEmi: 0,
+  stepType: "fixed",
+  stepAmount: 5000,
+  stepFrequencyYears: 1,
+  stepPeriods: 5,
+};
+
+export const defaultPossessionStartConfig: PossessionStartConfig = {
+  accruedAction: "add_to_principal",
+};
+
+export const defaultCustomPlanConfig: CustomPlanConfig = {
+  phaseAType: "fixed",
+  phaseAFixedAmount: 0,
+  phaseAMilestones: [],
+  phaseAThirdPartyPays: false,
+  phaseAThirdPartyLabel: "",
+  phaseAThirdPartyAmount: 0,
+  phaseAThirdPartyFromMonth: 1,
+  phaseAThirdPartyToMonth: 12,
+  phaseBLumpSum: false,
+  phaseBLumpSumAmount: 0,
+  phaseBLumpSumLabel: "",
+  phaseBAddToPrincipal: false,
+  phaseBAddAmount: 0,
+  phaseCAutoEmi: true,
+  phaseCManualEmi: 0,
+  phaseCChanges: false,
+  phaseCChangeType: "increase_pct",
+  phaseCChangePct: 5,
+  phaseCChangePoints: [],
+};
 
 export const defaultPaymentPlanInputs: PaymentPlanInputs = {
   planType: "pre_emi",
@@ -64,6 +185,10 @@ export const defaultPaymentPlanInputs: PaymentPlanInputs = {
   fixedEmiAmount: 0,
   accumulatedDiffAction: "lump_sum",
   holidayMonths: 6,
+  stepUp: defaultStepUpConfig,
+  stepDown: defaultStepDownConfig,
+  possessionStart: defaultPossessionStartConfig,
+  customPlan: defaultCustomPlanConfig,
   loanAmount: 0,
   tenureYears: 20,
   possessionMonth: 1,
@@ -112,7 +237,6 @@ export function computePreEmiSchedule(
     }
     const preEmi = disbursed * monthlyRate;
     totalPreEmi += preEmi;
-    // Only add rows at tranche months and last month for brevity
     if (
       m === 1 ||
       sorted.some((t) => t.month === m) ||
@@ -130,8 +254,8 @@ export function computePreEmiSchedule(
 // ────────────────────────────────────────────────
 export interface FullEmiComparison {
   fullEmi: number;
-  preEmiNow: number; // first month pre-EMI
-  preEmiAtPossession: number; // full EMI after possession for plan 1
+  preEmiNow: number;
+  preEmiAtPossession: number;
   principalAtPossessionPreEmi: number;
   principalAtPossessionFullEmi: number;
   totalInterestPreEmi: number;
@@ -151,7 +275,6 @@ export function computeFullEmiComparison(
   const preEmiNow = preEmi.rows[0]?.preEmi ?? 0;
   const preEmiAtPossession = fullEmi;
 
-  // For full EMI from day 1: principal paid down during construction
   const monthlyRate = interestRate / 12 / 100;
   let principalRemaining = loanAmount;
   let totalInterestFull = 0;
@@ -172,7 +295,6 @@ export function computeFullEmiComparison(
     return Math.max(0, p);
   })();
 
-  // Pre-EMI: no principal paid during construction
   const totalInterestPreEmi = preEmi.totalPreEmi + (() => {
     let p = loanAmount;
     let total = 0;
@@ -270,7 +392,7 @@ export function computeEmiHoliday(
   for (let m = 1; m <= holidayMonths; m++) {
     const interest = principal * monthlyRate;
     totalAccrued += interest;
-    principal += interest; // interest capitalizes
+    principal += interest;
 
     if (m === 1 || m === 6 || m === holidayMonths) {
       rows.push({ month: m, interestAccruing: interest, runningTotal: totalAccrued });
@@ -283,6 +405,311 @@ export function computeEmiHoliday(
   const originalEmi = calcEMI(loanAmount, interestRate, tenureYears);
 
   return { rows, totalAccrued, revisedPrincipal, revisedEmi, originalEmi };
+}
+
+// ────────────────────────────────────────────────
+// Plan 6 — Step-Up EMI schedule
+// ────────────────────────────────────────────────
+export interface StepScheduleRow {
+  period: number;
+  yearLabel: string;
+  monthlyEmi: number;
+}
+
+export function computeStepUpSchedule(
+  cfg: StepUpConfig,
+  loanAmount: number,
+  interestRate: number,
+  tenureYears: number,
+): { rows: StepScheduleRow[]; totalInterest: number; standardTotalInterest: number } {
+  const rows: StepScheduleRow[] = [];
+  let emi = cfg.startingEmi;
+  const totalMonths = tenureYears * 12;
+  const monthlyRate = interestRate / 12 / 100;
+  const standardEmi = calcEMI(loanAmount, interestRate, tenureYears);
+
+  // Build period schedule
+  for (let p = 0; p <= cfg.stepPeriods; p++) {
+    const startYear = p * cfg.stepFrequencyYears + 1;
+    const endYear = p < cfg.stepPeriods
+      ? (p + 1) * cfg.stepFrequencyYears
+      : tenureYears;
+    rows.push({
+      period: p + 1,
+      yearLabel: p < cfg.stepPeriods
+        ? `Year ${startYear}–${endYear}`
+        : `Year ${startYear}+`,
+      monthlyEmi: Math.round(emi),
+    });
+    if (p < cfg.stepPeriods) {
+      emi = cfg.stepType === "fixed"
+        ? emi + cfg.stepAmount
+        : emi * (1 + cfg.stepAmount / 100);
+    }
+  }
+
+  // Calculate total interest for step-up
+  let principal = loanAmount;
+  let totalInterest = 0;
+  let currentEmi = cfg.startingEmi;
+  let periodStart = 0;
+  for (let m = 1; m <= totalMonths && principal > 0; m++) {
+    const periodIdx = Math.floor((m - 1) / (cfg.stepFrequencyYears * 12));
+    if (periodIdx !== periodStart) {
+      for (let s = periodStart; s < periodIdx; s++) {
+        currentEmi = cfg.stepType === "fixed"
+          ? currentEmi + cfg.stepAmount
+          : currentEmi * (1 + cfg.stepAmount / 100);
+      }
+      periodStart = periodIdx;
+    }
+    // After all step-ups, EMI stabilises
+    const interest = principal * monthlyRate;
+    const payment = Math.min(currentEmi, principal + interest);
+    totalInterest += interest;
+    principal -= (payment - interest);
+  }
+
+  // Standard total interest
+  let stdPrincipal = loanAmount;
+  let standardTotalInterest = 0;
+  for (let m = 1; m <= totalMonths && stdPrincipal > 0; m++) {
+    const interest = stdPrincipal * monthlyRate;
+    standardTotalInterest += interest;
+    stdPrincipal -= (standardEmi - interest);
+  }
+
+  return { rows, totalInterest, standardTotalInterest };
+}
+
+// ────────────────────────────────────────────────
+// Plan 7 — Step-Down EMI schedule
+// ────────────────────────────────────────────────
+export function computeStepDownSchedule(
+  cfg: StepDownConfig,
+  loanAmount: number,
+  interestRate: number,
+  tenureYears: number,
+): { rows: StepScheduleRow[]; totalInterest: number; standardTotalInterest: number } {
+  const rows: StepScheduleRow[] = [];
+  let emi = cfg.startingEmi;
+  const totalMonths = tenureYears * 12;
+  const monthlyRate = interestRate / 12 / 100;
+  const standardEmi = calcEMI(loanAmount, interestRate, tenureYears);
+  const minEmi = loanAmount * monthlyRate; // at least interest-only
+
+  for (let p = 0; p <= cfg.stepPeriods; p++) {
+    const startYear = p * cfg.stepFrequencyYears + 1;
+    const endYear = p < cfg.stepPeriods
+      ? (p + 1) * cfg.stepFrequencyYears
+      : tenureYears;
+    rows.push({
+      period: p + 1,
+      yearLabel: p < cfg.stepPeriods
+        ? `Year ${startYear}–${endYear}`
+        : `Year ${startYear}+`,
+      monthlyEmi: Math.round(Math.max(emi, minEmi)),
+    });
+    if (p < cfg.stepPeriods) {
+      emi = cfg.stepType === "fixed"
+        ? emi - cfg.stepAmount
+        : emi * (1 - cfg.stepAmount / 100);
+      emi = Math.max(emi, minEmi);
+    }
+  }
+
+  // Calculate total interest for step-down
+  let principal = loanAmount;
+  let totalInterest = 0;
+  let currentEmi = cfg.startingEmi;
+  let periodStart = 0;
+  for (let m = 1; m <= totalMonths && principal > 0; m++) {
+    const periodIdx = Math.floor((m - 1) / (cfg.stepFrequencyYears * 12));
+    if (periodIdx !== periodStart) {
+      for (let s = periodStart; s < periodIdx; s++) {
+        currentEmi = cfg.stepType === "fixed"
+          ? currentEmi - cfg.stepAmount
+          : currentEmi * (1 - cfg.stepAmount / 100);
+        currentEmi = Math.max(currentEmi, minEmi);
+      }
+      periodStart = periodIdx;
+    }
+    const interest = principal * monthlyRate;
+    const payment = Math.min(Math.max(currentEmi, interest), principal + interest);
+    totalInterest += interest;
+    principal -= (payment - interest);
+  }
+
+  let stdPrincipal = loanAmount;
+  let standardTotalInterest = 0;
+  for (let m = 1; m <= totalMonths && stdPrincipal > 0; m++) {
+    const interest = stdPrincipal * monthlyRate;
+    standardTotalInterest += interest;
+    stdPrincipal -= (standardEmi - interest);
+  }
+
+  return { rows, totalInterest, standardTotalInterest };
+}
+
+// ────────────────────────────────────────────────
+// Plan 8 — Possession-Date EMI Start
+// ────────────────────────────────────────────────
+export interface PossessionAccrualRow {
+  month: number;
+  monthlyInterest: number;
+  totalAccrued: number;
+}
+
+export function computePossessionDateAccrual(
+  loanAmount: number,
+  interestRate: number,
+  possessionMonth: number,
+): { rows: PossessionAccrualRow[]; totalAccrued: number } {
+  const monthlyRate = interestRate / 12 / 100;
+  const monthlyInterest = loanAmount * monthlyRate;
+  let totalAccrued = 0;
+  const rows: PossessionAccrualRow[] = [];
+
+  for (let m = 1; m <= possessionMonth; m++) {
+    totalAccrued += monthlyInterest;
+    if (m === 1 || m === 6 || m === 12 || m === possessionMonth || m % 12 === 0) {
+      rows.push({ month: m, monthlyInterest, totalAccrued });
+    }
+  }
+
+  return { rows, totalAccrued };
+}
+
+// ────────────────────────────────────────────────
+// Plan comparison helper — compare any plan vs Pre-EMI
+// ────────────────────────────────────────────────
+export interface PlanComparisonRow {
+  label: string;
+  yourPlan: string;
+  preEmi: string;
+  yourPlanBetter: boolean | null; // null = equal
+}
+
+export function computePlanComparison(
+  plan: PaymentPlanInputs,
+): PlanComparisonRow[] {
+  const fullEmi = calcEMI(plan.loanAmount, plan.interestRate, plan.tenureYears);
+  const monthlyRate = plan.interestRate / 12 / 100;
+  const totalMonths = plan.tenureYears * 12;
+
+  // Pre-EMI baseline (assume full loan disbursed at month 1 for simplicity)
+  const preEmiMonthly = plan.loanAmount * monthlyRate;
+  const preEmiTotalBefore = preEmiMonthly * plan.possessionMonth;
+  const preEmiTotalInterest = preEmiTotalBefore + computeStandardTotalInterest(plan.loanAmount, plan.interestRate, plan.tenureYears);
+
+  // Your plan
+  let yourMonthlyNow = 0;
+  let yourTotalBefore = 0;
+  let yourLumpSum = 0;
+  let yourEmiAfter = fullEmi;
+  let yourTotalInterest = 0;
+
+  switch (plan.planType) {
+    case "step_up_emi": {
+      yourMonthlyNow = plan.stepUp.startingEmi;
+      const result = computeStepUpSchedule(plan.stepUp, plan.loanAmount, plan.interestRate, plan.tenureYears);
+      yourTotalInterest = result.totalInterest;
+      yourTotalBefore = yourMonthlyNow * plan.possessionMonth;
+      yourEmiAfter = result.rows[result.rows.length - 1]?.monthlyEmi ?? fullEmi;
+      break;
+    }
+    case "step_down_emi": {
+      yourMonthlyNow = plan.stepDown.startingEmi;
+      const result = computeStepDownSchedule(plan.stepDown, plan.loanAmount, plan.interestRate, plan.tenureYears);
+      yourTotalInterest = result.totalInterest;
+      yourTotalBefore = yourMonthlyNow * plan.possessionMonth;
+      yourEmiAfter = result.rows[result.rows.length - 1]?.monthlyEmi ?? fullEmi;
+      break;
+    }
+    case "possession_date_start": {
+      yourMonthlyNow = 0;
+      const accrual = computePossessionDateAccrual(plan.loanAmount, plan.interestRate, plan.possessionMonth);
+      yourTotalBefore = 0;
+      if (plan.possessionStart.accruedAction === "add_to_principal") {
+        const revised = plan.loanAmount + accrual.totalAccrued;
+        yourEmiAfter = calcEMI(revised, plan.interestRate, plan.tenureYears);
+        yourTotalInterest = accrual.totalAccrued + computeStandardTotalInterest(revised, plan.interestRate, plan.tenureYears);
+      } else {
+        yourLumpSum = accrual.totalAccrued;
+        yourEmiAfter = fullEmi;
+        yourTotalInterest = accrual.totalAccrued + computeStandardTotalInterest(plan.loanAmount, plan.interestRate, plan.tenureYears);
+      }
+      break;
+    }
+    case "custom_plan": {
+      const cp = plan.customPlan;
+      yourMonthlyNow = cp.phaseAType === "fixed" ? cp.phaseAFixedAmount : (cp.phaseAMilestones[0]?.amount ?? 0);
+      yourTotalBefore = cp.phaseAType === "fixed"
+        ? cp.phaseAFixedAmount * plan.possessionMonth
+        : cp.phaseAMilestones.reduce((s, m) => s + m.amount, 0);
+      yourLumpSum = cp.phaseBLumpSum ? cp.phaseBLumpSumAmount : 0;
+      yourEmiAfter = cp.phaseCAutoEmi ? fullEmi : cp.phaseCManualEmi;
+      yourTotalInterest = computeStandardTotalInterest(plan.loanAmount, plan.interestRate, plan.tenureYears);
+      break;
+    }
+    default:
+      return [];
+  }
+
+  const rows: PlanComparisonRow[] = [
+    {
+      label: "Monthly payment now",
+      yourPlan: formatINR(yourMonthlyNow),
+      preEmi: formatINR(preEmiMonthly),
+      yourPlanBetter: yourMonthlyNow < preEmiMonthly ? true : yourMonthlyNow > preEmiMonthly ? false : null,
+    },
+    {
+      label: "Total paid before possession",
+      yourPlan: formatINR(yourTotalBefore),
+      preEmi: formatINR(preEmiTotalBefore),
+      yourPlanBetter: yourTotalBefore < preEmiTotalBefore ? true : yourTotalBefore > preEmiTotalBefore ? false : null,
+    },
+  ];
+
+  if (yourLumpSum > 0) {
+    rows.push({
+      label: "Lump sum at possession",
+      yourPlan: formatINR(yourLumpSum),
+      preEmi: "N/A",
+      yourPlanBetter: false,
+    });
+  }
+
+  rows.push(
+    {
+      label: "EMI after possession",
+      yourPlan: formatINR(yourEmiAfter),
+      preEmi: formatINR(fullEmi),
+      yourPlanBetter: yourEmiAfter < fullEmi ? true : yourEmiAfter > fullEmi ? false : null,
+    },
+    {
+      label: "Total interest payable",
+      yourPlan: formatINR(yourTotalInterest),
+      preEmi: formatINR(preEmiTotalInterest),
+      yourPlanBetter: yourTotalInterest < preEmiTotalInterest ? true : yourTotalInterest > preEmiTotalInterest ? false : null,
+    },
+  );
+
+  return rows;
+}
+
+function computeStandardTotalInterest(loanAmount: number, interestRate: number, tenureYears: number): number {
+  const emi = calcEMI(loanAmount, interestRate, tenureYears);
+  const monthlyRate = interestRate / 12 / 100;
+  const totalMonths = tenureYears * 12;
+  let principal = loanAmount;
+  let totalInterest = 0;
+  for (let m = 1; m <= totalMonths && principal > 0; m++) {
+    const interest = principal * monthlyRate;
+    totalInterest += interest;
+    principal -= (emi - interest);
+  }
+  return totalInterest;
 }
 
 // ────────────────────────────────────────────────
@@ -314,6 +741,63 @@ export function monthlyPaymentAtOffset(
       return monthOffset >= plan.possessionMonth ? fullEmi : plan.fixedEmiAmount;
     case "emi_holiday":
       return monthOffset <= plan.holidayMonths ? 0 : fullEmi;
+    case "step_up_emi": {
+      const cfg = plan.stepUp;
+      const periodIdx = Math.floor((monthOffset - 1) / (cfg.stepFrequencyYears * 12));
+      let emi = cfg.startingEmi;
+      for (let p = 0; p < Math.min(periodIdx, cfg.stepPeriods); p++) {
+        emi = cfg.stepType === "fixed" ? emi + cfg.stepAmount : emi * (1 + cfg.stepAmount / 100);
+      }
+      return emi;
+    }
+    case "step_down_emi": {
+      const cfg = plan.stepDown;
+      const minEmi = plan.loanAmount * r;
+      const periodIdx = Math.floor((monthOffset - 1) / (cfg.stepFrequencyYears * 12));
+      let emi = cfg.startingEmi;
+      for (let p = 0; p < Math.min(periodIdx, cfg.stepPeriods); p++) {
+        emi = cfg.stepType === "fixed" ? emi - cfg.stepAmount : emi * (1 - cfg.stepAmount / 100);
+        emi = Math.max(emi, minEmi);
+      }
+      return Math.max(emi, minEmi);
+    }
+    case "possession_date_start":
+      return monthOffset >= plan.possessionMonth
+        ? (plan.possessionStart.accruedAction === "add_to_principal"
+          ? calcEMI(plan.loanAmount + plan.loanAmount * r * plan.possessionMonth, plan.interestRate, plan.tenureYears)
+          : fullEmi)
+        : 0;
+    case "custom_plan": {
+      const cp = plan.customPlan;
+      if (monthOffset < plan.possessionMonth) {
+        // Before possession
+        if (cp.phaseAType === "fixed") return cp.phaseAFixedAmount;
+        // Milestone-based: find the active milestone
+        const sorted = [...cp.phaseAMilestones].sort((a, b) => a.fromMonth - b.fromMonth);
+        let amount = 0;
+        for (const ms of sorted) {
+          if (monthOffset >= ms.fromMonth) amount = ms.amount;
+        }
+        return amount;
+      }
+      // After possession
+      const baseEmi = cp.phaseCAutoEmi ? fullEmi : cp.phaseCManualEmi;
+      if (!cp.phaseCChanges) return baseEmi;
+      const monthsAfter = monthOffset - plan.possessionMonth;
+      if (cp.phaseCChangeType === "custom") {
+        const sorted = [...cp.phaseCChangePoints].sort((a, b) => a.fromMonthAfterPossession - b.fromMonthAfterPossession);
+        let emi = baseEmi;
+        for (const pt of sorted) {
+          if (monthsAfter >= pt.fromMonthAfterPossession) emi = pt.newEmi;
+        }
+        return emi;
+      }
+      const yearsAfter = Math.floor(monthsAfter / 12);
+      const mult = cp.phaseCChangeType === "increase_pct"
+        ? Math.pow(1 + cp.phaseCChangePct / 100, yearsAfter)
+        : Math.pow(1 - cp.phaseCChangePct / 100, yearsAfter);
+      return baseEmi * mult;
+    }
     default:
       return fullEmi;
   }
@@ -326,4 +810,58 @@ export function formatMonthLabel(monthOffset: number): string {
   const mmm = d.toLocaleString("en-IN", { month: "short" });
   const yyyy = d.getFullYear();
   return `Month ${monthOffset} — ${mmm} ${yyyy}`;
+}
+
+// ────────────────────────────────────────────────
+// Plan metrics summary for AI suggestions
+// ────────────────────────────────────────────────
+export function getPlanMetricsForAI(plan: PaymentPlanInputs): {
+  planType: string;
+  planLabel: string;
+  monthlyPaymentNow: number;
+  emiAfterPossession: number;
+  totalInterestEstimate: number;
+  lumpSumAtPossession: number;
+} {
+  const fullEmi = calcEMI(plan.loanAmount, plan.interestRate, plan.tenureYears);
+  const monthlyNow = monthlyPaymentAtOffset(plan, 1);
+  let totalInterest = computeStandardTotalInterest(plan.loanAmount, plan.interestRate, plan.tenureYears);
+  let lumpSum = 0;
+  let emiAfter = fullEmi;
+
+  switch (plan.planType) {
+    case "step_up_emi": {
+      const r = computeStepUpSchedule(plan.stepUp, plan.loanAmount, plan.interestRate, plan.tenureYears);
+      totalInterest = r.totalInterest;
+      break;
+    }
+    case "step_down_emi": {
+      const r = computeStepDownSchedule(plan.stepDown, plan.loanAmount, plan.interestRate, plan.tenureYears);
+      totalInterest = r.totalInterest;
+      break;
+    }
+    case "possession_date_start": {
+      const accrual = computePossessionDateAccrual(plan.loanAmount, plan.interestRate, plan.possessionMonth);
+      if (plan.possessionStart.accruedAction === "add_to_principal") {
+        const revised = plan.loanAmount + accrual.totalAccrued;
+        emiAfter = calcEMI(revised, plan.interestRate, plan.tenureYears);
+        totalInterest = accrual.totalAccrued + computeStandardTotalInterest(revised, plan.interestRate, plan.tenureYears);
+      } else {
+        lumpSum = accrual.totalAccrued;
+        totalInterest = accrual.totalAccrued + totalInterest;
+      }
+      break;
+    }
+    default:
+      break;
+  }
+
+  return {
+    planType: plan.planType,
+    planLabel: paymentPlanLabels[plan.planType],
+    monthlyPaymentNow: monthlyNow,
+    emiAfterPossession: emiAfter,
+    totalInterestEstimate: totalInterest,
+    lumpSumAtPossession: lumpSum,
+  };
 }
