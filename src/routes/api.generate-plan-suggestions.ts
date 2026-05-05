@@ -193,13 +193,32 @@ Additional suggestion areas to cover when relevant:
 - If annual-payment burden is significant, suggest keeping a buffer for those months when surplus drops.`;
 }
 
-async function callAiWithRetry(apiKey: string, profile: z.infer<typeof profileSchema>) {
+function buildPaymentPlanContext(metrics?: z.infer<typeof paymentPlanMetricsSchema>): string {
+  if (!metrics || !metrics.planType) return "";
+  return `
+- Payment plan type: ${metrics.planLabel ?? metrics.planType}
+- Monthly payment now under this plan: ₹${Math.round(metrics.monthlyPaymentNow ?? 0)}
+- EMI after possession: ₹${Math.round(metrics.emiAfterPossession ?? 0)}
+- Total interest estimate: ₹${Math.round(metrics.totalInterestEstimate ?? 0)}
+- Lump sum at possession: ₹${Math.round(metrics.lumpSumAtPossession ?? 0)}
+
+Payment plan-specific suggestion areas:
+- For Step-Up EMI: note the lower starting EMI frees up cash for corpus building now, but costs more interest overall.
+- For Step-Down EMI: note the higher starting EMI saves interest, quantify the savings.
+- For Subvention: note ₹0 outflow during construction frees monthly surplus for corpus building.
+- For EMI Holiday: note accrued interest adds to principal silently; suggest a part payment to offset.
+- For Possession-Date Start: note paying nothing until possession adds hidden cost; suggest even one part payment during construction.
+- For Custom Plan: reference the user's specific payment schedule in suggestions.`;
+}
+
+async function callAiWithRetry(apiKey: string, profile: z.infer<typeof profileSchema>, paymentPlanMetrics?: z.infer<typeof paymentPlanMetricsSchema>) {
+  const userPrompt = buildUserPrompt(profile) + buildPaymentPlanContext(paymentPlanMetrics);
   const body = JSON.stringify({
     model: process.env.LOVABLE_API_KEY ? "google/gemini-3-flash-preview" : "gpt-4o-mini",
     temperature: 0.7,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: buildUserPrompt(profile) },
+      { role: "user", content: userPrompt },
     ],
   });
 
