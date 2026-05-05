@@ -123,7 +123,7 @@ export const Route = createFileRoute("/api/generate-plan-suggestions")({
           const apiKey = process.env.LOVABLE_API_KEY ?? process.env.OPENAI_API_KEY;
           if (!apiKey) return jsonError("AI suggestions are not configured yet.", 500);
 
-          const response = await callAiWithRetry(apiKey, parsed.data.profile);
+          const response = await callAiWithRetry(apiKey, parsed.data.profile, parsed.data.paymentPlanMetrics);
           if (!response.ok)
             return jsonError(
               "AI suggestions are busy right now. Please try regenerating.",
