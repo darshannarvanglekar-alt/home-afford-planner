@@ -57,8 +57,18 @@ const profileSchema = z.object({
   annualPaymentMonthlyEquivalent: z.number().optional().default(0),
 });
 
+const paymentPlanMetricsSchema = z.object({
+  planType: z.string().optional(),
+  planLabel: z.string().optional(),
+  monthlyPaymentNow: z.number().optional(),
+  emiAfterPossession: z.number().optional(),
+  totalInterestEstimate: z.number().optional(),
+  lumpSumAtPossession: z.number().optional(),
+}).optional();
+
 const requestSchema = z.object({
   profile: profileSchema,
+  paymentPlanMetrics: paymentPlanMetricsSchema,
 });
 
 const SYSTEM_PROMPT = `You generate neutral scenario-planning suggestion cards for an Indian home affordability scenario simulator. This app is not a financial advisory tool.
