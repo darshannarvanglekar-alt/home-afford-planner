@@ -105,10 +105,26 @@ export function StepCurrentInvestments({ value, possessionMonth, onChange }: Pro
             value={formatINR(summary.currentCorpus)}
           />
           <SummaryRow
-            label="Projected corpus from existing investments at possession / purchase date"
-            value={formatINR(summary.projectedCorpus)}
+            label="Corpus available at possession"
+            value={formatINR(summary.corpusAvailable)}
           />
+          {summary.corpusAfterPossession > 0 && (
+            <SummaryRow
+              label="Investments maturing after possession"
+              value={formatINR(summary.corpusAfterPossession)}
+            />
+          )}
         </dl>
+        {summary.corpusAvailable > 0 && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Corpus available at possession includes only investments available by Month {possessionMonth}.
+          </p>
+        )}
+        {summary.items.filter(i => i.status === "matured_after").length > 0 && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            ⚠️ {summary.items.filter(i => i.status === "matured_after").length} investment(s) mature after possession and are not included in the possession corpus.
+          </p>
+        )}
       </section>
     </div>
   );
