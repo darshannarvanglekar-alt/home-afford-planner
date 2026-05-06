@@ -232,12 +232,31 @@ export function Step4Plan({
       </section>
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard label="Monthly EMI" value={formatINR(plan.newEmi)} />
-        <MetricCard
-          label="Monthly Surplus"
-          value={formatINR(plan.surplusAfterEmi)}
-          valueClassName={plan.surplusAfterEmi >= 0 ? "text-success" : "text-destructive"}
-        />
+        {plan.isUnderConstruction ? (
+          <>
+            <MetricCard label="Current Monthly Outflow" value={formatINR(plan.currentMonthlyOutflow)} />
+            <MetricCard label="Full EMI After Possession" value={formatINR(plan.fullEmiAfterPossession)} />
+            <MetricCard
+              label="Current Surplus"
+              value={formatINR(plan.currentSurplus)}
+              valueClassName={plan.currentSurplus >= 0 ? "text-success" : "text-destructive"}
+            />
+            <MetricCard
+              label="Surplus After Possession"
+              value={formatINR(plan.surplusAfterPossession)}
+              valueClassName={plan.surplusAfterPossession >= 0 ? "text-success" : "text-destructive"}
+            />
+          </>
+        ) : (
+          <>
+            <MetricCard label="Monthly EMI" value={formatINR(plan.newEmi)} />
+            <MetricCard
+              label="Monthly Surplus"
+              value={formatINR(plan.surplusAfterEmi)}
+              valueClassName={plan.surplusAfterEmi >= 0 ? "text-success" : "text-destructive"}
+            />
+          </>
+        )}
         <MetricCard
           label="EMI to Income Ratio"
           value={`${plan.emiToIncomePct.toFixed(1)}%`}
