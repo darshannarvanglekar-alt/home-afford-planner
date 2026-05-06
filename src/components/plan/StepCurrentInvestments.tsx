@@ -35,7 +35,7 @@ interface Props {
 const investmentOptions = Object.entries(investmentTypeLabels) as Array<[InvestmentType, string]>;
 
 export function StepCurrentInvestments({ value, possessionMonth, onChange }: Props) {
-  const summary = summarizeInvestments(value, possessionMonth);
+  const summary = summarizeInvestmentsForPossession(value, possessionMonth);
 
   const addRow = () => {
     if (value.length >= 10) return;
