@@ -496,6 +496,81 @@ export function summarizeInvestments(investments: CurrentInvestment[], monthsToT
     ),
   };
 }
+
+// Maturity-aware corpus breakdown for possession date (Fix 3)
+export function summarizeInvestmentsForPossession(
+  investments: CurrentInvestment[],
+  possessionMonths: number,
+) {
+  const availableAtPossession: Array<{
+    inv: CurrentInvestment;
+    value: number;
+    status: "matured_before" | "accumulated" | "matured_after";
+    maturityMonth: number | null;
+  }> = [];
+
+  let corpusAvailable = 0;
+  let corpusAfterPossession = 0;
+
+  for (const inv of investments) {
+    // Pure protection — no corpus
+    if (inv.type === "protection_plan" && insuranceIsPureProtection(inv.insuranceSubtype)) continue;
+    if (insuranceIsAnnuity(inv.insuranceSubtype)) continue;
+
+    // Insurance with returns — check maturity date
+    if (inv.type === "protection_plan" && insuranceHasReturns(inv.insuranceSubtype)) {
+      const m = monthsUntilEndDate(inv.maturityDate);
+      if (m === null) continue;
+      const maturityValue = inv.maturityValue ?? 0;
+      if (m <= possessionMonths) {
+        corpusAvailable += maturityValue;
+        availableAtPossession.push({ inv, value: maturityValue, status: "matured_before", maturityMonth: m });
+      } else {
+        corpusAfterPossession += maturityValue;
+        availableAtPossession.push({ inv, value: maturityValue, status: "matured_after", maturityMonth: m });
+      }
+      continue;
+    }
+
+    // Regular investments — check monthsRemaining
+    const current = estimateInvestmentCurrentValue(inv);
+    const totalMonths = possessionMonths;
+
+    if (!inv.continuing || isLumpSumInvestment(inv.type)) {
+      // Lump sum or stopped — just grows at assumed rate
+      const projected = futureValueAmount(current, inv.assumedReturn, totalMonths);
+      corpusAvailable += projected;
+      availableAtPossession.push({ inv, value: projected, status: "matured_before", maturityMonth: null });
+    } else {
+      // Continuing investment
+      const monthsContributing = Math.min(totalMonths, inv.monthsRemaining);
+      const carried = futureValueAmount(current, inv.assumedReturn, totalMonths);
+      const monthly = investmentMonthlyContribution(inv);
+      const newContributions = futureValueSeries(monthly, inv.assumedReturn, monthsContributing);
+      const totalValue = carried + newContributions;
+
+      if (monthsContributing >= totalMonths) {
+        // Still running at possession — show accumulated value
+        corpusAvailable += totalValue;
+        availableAtPossession.push({ inv, value: totalValue, status: "accumulated", maturityMonth: null });
+      } else {
+        // Matures before possession — full value available
+        corpusAvailable += totalValue;
+        availableAtPossession.push({ inv, value: totalValue, status: "matured_before", maturityMonth: monthsContributing });
+      }
+    }
+  }
+
+  return {
+    corpusAvailable,
+    corpusAfterPossession,
+    items: availableAtPossession,
+    monthlyCommitment: investments
+      .filter((item) => !isLumpSumInvestment(item.type) && item.continuing)
+      .reduce((sum, item) => sum + investmentMonthlyContribution(item), 0),
+    currentCorpus: investments.reduce((sum, item) => sum + estimateInvestmentCurrentValue(item), 0),
+  };
+}
 function futureValueSeries(monthly: number, annualRate: number, months: number) {
   let value = 0;
   const r = annualRate / 12 / 100;
