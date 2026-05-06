@@ -671,12 +671,7 @@ function FixedEmiInputs({
         />
       </div>
 
-      <TrancheInputs
-        value={value}
-        onTrancheCountChange={onTrancheCountChange}
-        onTrancheUpdate={onTrancheUpdate}
-        set={set}
-      />
+      <TrancheInputs value={value} />
 
       {rows.length > 0 && (
         <div className="space-y-3">
