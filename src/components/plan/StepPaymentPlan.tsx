@@ -145,18 +145,20 @@ export function StepPaymentPlan({ value, onChange, home }: Props) {
     setShowSkipHint(false);
     const loanAmt = Math.max(0, home.propertyCost - home.downPayment);
     const needsTranches = type === "pre_emi" || type === "full_emi_day1" || type === "fixed_emi_accumulated";
+    const stageCount = home.disbursementStages || 3;
     const tranches =
       needsTranches && (value.tranches.length === 0 || value.planType !== type)
-        ? generateDefaultTranches(value.trancheCount || 3, loanAmt, home.possessionMonth)
+        ? generateDefaultTranches(stageCount, loanAmt, home.possessionMonth)
         : value.tranches;
-    const fullEmi = calcEMI(loanAmt, home.interestRateA || value.interestRate, home.tenureYears || value.tenureYears);
+    const fullEmi = calcEMI(loanAmt, home.interestRateA, home.tenureYears);
     onChange({
       ...value,
       planType: type,
       tranches,
+      trancheCount: stageCount,
       loanAmount: loanAmt,
-      interestRate: home.interestRateA || value.interestRate,
-      tenureYears: home.tenureYears || value.tenureYears,
+      interestRate: home.interestRateA,
+      tenureYears: home.tenureYears,
       possessionMonth: home.possessionMonth,
       // Auto-populate step-up/down starting EMI if not set
       stepUp: {
