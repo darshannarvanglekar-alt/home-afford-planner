@@ -367,106 +367,35 @@ export function StepPaymentPlan({ value, onChange, home }: Props) {
 // ────────────── Shared tranche UI ──────────────
 function TrancheInputs({
   value,
-  onTrancheCountChange,
-  onTrancheUpdate,
-  set,
 }: {
   value: PaymentPlanInputs;
-  onTrancheCountChange: (n: number) => void;
-  onTrancheUpdate: (id: string, patch: Partial<{ month: number; amount: number }>) => void;
-  set: <K extends keyof PaymentPlanInputs>(k: K, v: PaymentPlanInputs[K]) => void;
+  onTrancheCountChange?: (n: number) => void;
+  onTrancheUpdate?: (id: string, patch: Partial<{ month: number; amount: number }>) => void;
+  set?: <K extends keyof PaymentPlanInputs>(k: K, v: PaymentPlanInputs[K]) => void;
 }) {
-  const totalTranches = value.tranches.reduce((s, t) => s + t.amount, 0);
-  const diff = value.loanAmount - totalTranches;
-
   return (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <Label>Number of disbursement tranches</Label>
-        <div className="flex flex-wrap gap-2">
-          {[2, 3, 4, 5, 6].map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => onTrancheCountChange(n)}
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-lg border-2 text-sm font-semibold transition-colors",
-                value.trancheCount === n
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-foreground hover:border-primary/50",
-              )}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        {value.tranches.map((t) => (
-          <div
-            key={t.id}
-            className="rounded-xl border border-border bg-card p-3 shadow-soft"
-          >
-            <div className="mb-2 text-xs font-semibold text-muted-foreground">
-              {t.label}
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Disbursement month</Label>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  value={t.month}
-                  onChange={(e) =>
-                    onTrancheUpdate(t.id, {
-                      month: Math.max(1, parseInt(e.target.value) || 1),
-                    })
-                  }
-                  className="h-9"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {formatMonthLabel(t.month)}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Amount (₹)</Label>
-                <CurrencyInput
-                  value={t.amount}
-                  onValueChange={(n) => onTrancheUpdate(t.id, { amount: n })}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {Math.abs(diff) > 1 && (
-        <p className="text-xs font-medium text-destructive">
-          Tranches {diff > 0 ? "are short by" : "exceed loan by"}{" "}
-          {formatINR(Math.abs(diff))} — total must equal{" "}
-          {formatINR(value.loanAmount)}
+      {/* Read-only interest rate display (Fix 1) */}
+      <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
+        <p className="text-sm text-foreground">
+          Using your loan interest rate:{" "}
+          <span className="font-bold text-primary">{value.interestRate}%</span>{" "}
+          <span className="text-xs text-muted-foreground">(edit in Your Loan step)</span>
         </p>
-      )}
+      </div>
 
-      <div className="space-y-1.5 sm:max-w-xs">
-        <Label>Annual interest rate (%)</Label>
-        <Input
-          type="number"
-          inputMode="decimal"
-          step="0.01"
-          min={0}
-          max={50}
-          value={value.interestRate || ""}
-          onChange={(e) => {
-            const n = parseFloat(e.target.value);
-            set("interestRate", Number.isFinite(n) ? n : 0);
-          }}
-          placeholder="8.5"
-          className="h-9"
-        />
+      {/* Equal disbursement summary (Fix 4) */}
+      <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 space-y-2">
+        <p className="text-sm font-semibold text-foreground">
+          Disbursement: {value.trancheCount} equal stages
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {formatINR(Math.round(value.loanAmount / (value.trancheCount || 3)))} per stage,
+          spread across {value.possessionMonth} months of construction.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          We assume equal disbursement across stages. This gives a close approximation for planning purposes.
+        </p>
       </div>
     </div>
   );
