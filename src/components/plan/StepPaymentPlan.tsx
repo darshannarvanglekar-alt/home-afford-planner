@@ -500,12 +500,7 @@ function FullEmiInputs({
       <h2 className="text-base font-semibold text-foreground">
         Full EMI From Day 1 — Details
       </h2>
-      <TrancheInputs
-        value={value}
-        onTrancheCountChange={onTrancheCountChange}
-        onTrancheUpdate={onTrancheUpdate}
-        set={set}
-      />
+      <TrancheInputs value={value} />
 
       <div className="rounded-xl bg-primary/10 px-4 py-3 text-center">
         <p className="text-xs font-medium uppercase tracking-wide text-primary/80">
