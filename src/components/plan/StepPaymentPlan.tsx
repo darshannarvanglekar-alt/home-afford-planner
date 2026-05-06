@@ -428,12 +428,7 @@ function PreEmiInputs({
       <h2 className="text-base font-semibold text-foreground">
         Pre-EMI Plan Details
       </h2>
-      <TrancheInputs
-        value={value}
-        onTrancheCountChange={onTrancheCountChange}
-        onTrancheUpdate={onTrancheUpdate}
-        set={set}
-      />
+      <TrancheInputs value={value} />
 
       {rows.length > 0 && (
         <div className="space-y-3">
