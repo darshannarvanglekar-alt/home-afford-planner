@@ -19,11 +19,12 @@ import {
   investmentTypeLabels,
   isLumpSumInvestment,
   monthlyEquivalent,
-  summarizeInvestments,
+  summarizeInvestmentsForPossession,
   type CurrentInvestment,
   type InsuranceSubtype,
   type InvestmentType,
 } from "@/lib/plan-schema";
+import { formatYearMonth } from "./MonthYearPicker";
 
 interface Props {
   value: CurrentInvestment[];
