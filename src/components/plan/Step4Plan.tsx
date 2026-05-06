@@ -179,9 +179,16 @@ export function Step4Plan({
             <Pencil className="h-4 w-4 shrink-0 text-muted-foreground" />
           </button>
         )}
-        <p className="mt-2 text-sm text-muted-foreground">
-          Here is how this home purchase fits your monthly cash flow.
-        </p>
+        {/* Fix 5: contextual subheading based on property type */}
+        {home.propertyType === "construction" && home.possessionMonth > 3 ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Your plan for an under-construction home{home.city ? ` in ${home.city}` : ""} — expected possession in Month {home.possessionMonth}.
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Here is how this home purchase fits your monthly cash flow.
+          </p>
+        )}
         {plan.surplusBeforeEmi <= 0 ? (
           <p className="mt-2 text-sm font-semibold text-destructive">
             Your current expenses exceed your income. Please review your numbers.
