@@ -652,6 +652,12 @@ export interface AffordabilityPlan {
   emiToIncomePct: number;
   emergencyFundNeeded: number;
   layerScores: AffordabilityLayerScore[];
+  // Fix 6: Pre/post possession outflow breakdown
+  currentMonthlyOutflow: number; // pre-EMI / payment plan outflow now
+  fullEmiAfterPossession: number;
+  currentSurplus: number;
+  surplusAfterPossession: number;
+  isUnderConstruction: boolean;
 }
 
 function scoreByRatio(ratio: number, thresholds: Array<[number, number]>): number {
