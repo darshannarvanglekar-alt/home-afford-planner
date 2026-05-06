@@ -174,17 +174,21 @@ export function StepPaymentPlan({ value, onChange, home }: Props) {
 
   React.useEffect(() => {
     const loanAmt = Math.max(0, home.propertyCost - home.downPayment);
-    if (loanAmt !== value.loanAmount || home.possessionMonth !== value.possessionMonth) {
+    const stageCount = home.disbursementStages || 3;
+    if (loanAmt !== value.loanAmount || home.possessionMonth !== value.possessionMonth || home.interestRateA !== value.interestRate || home.tenureYears !== value.tenureYears) {
+      const needsTranches = value.planType === "pre_emi" || value.planType === "full_emi_day1" || value.planType === "fixed_emi_accumulated";
       onChange({
         ...value,
         loanAmount: loanAmt,
-        interestRate: home.interestRateA || value.interestRate,
-        tenureYears: home.tenureYears || value.tenureYears,
+        interestRate: home.interestRateA,
+        tenureYears: home.tenureYears,
         possessionMonth: home.possessionMonth,
+        trancheCount: stageCount,
+        tranches: needsTranches ? generateDefaultTranches(stageCount, loanAmt, home.possessionMonth) : value.tranches,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [home.propertyCost, home.downPayment, home.possessionMonth, home.interestRateA, home.tenureYears]);
+  }, [home.propertyCost, home.downPayment, home.possessionMonth, home.interestRateA, home.tenureYears, home.disbursementStages]);
 
   const handleNextAttempt = React.useCallback(() => {
     if (!value.planType) {
