@@ -719,6 +719,20 @@ export function calculateAffordabilityPlan(
     awfMonthly(finances.expenses.daily);
   const investmentRatio = surplusAfterEmi > 0 ? 2 : 0;
 
+  // Fix 6: Pre/post possession breakdown
+  const isUnderConstruction = home.propertyType === "construction";
+  // For under-construction, the current outflow is pre-EMI interest on first disbursement
+  // approximation: interest on (loanAmount / disbursementStages) for first tranche
+  const loan = loanAmount(home);
+  const stages = home.disbursementStages || 3;
+  const preEmiInterest = isUnderConstruction
+    ? (loan / stages) * (home.interestRateA / 12 / 100)
+    : 0;
+  const currentMonthlyOutflow = isUnderConstruction ? preEmiInterest : newEmi;
+  const fullEmiAfterPossession = newEmi;
+  const currentSurplus = surplusBeforeEmi - currentMonthlyOutflow;
+  const surplusAfterPossession = surplusBeforeEmi - fullEmiAfterPossession;
+
   return {
     verdict,
     headline,
@@ -730,6 +744,11 @@ export function calculateAffordabilityPlan(
     surplusAfterEmi,
     emiToIncomePct,
     emergencyFundNeeded,
+    currentMonthlyOutflow,
+    fullEmiAfterPossession,
+    currentSurplus,
+    surplusAfterPossession,
+    isUnderConstruction,
     layerScores: [
       {
         name: "Layer 1 — Survival Check",
