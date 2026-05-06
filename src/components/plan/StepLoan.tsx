@@ -43,13 +43,11 @@ export function StepLoan({ value, onChange }: Props) {
         <h2 className="text-base font-semibold text-foreground">Down payment</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="propertyCostRO">Property Cost</Label>
-            <CurrencyInput
-              id="propertyCostRO"
-              value={value.propertyCost}
-              onValueChange={(n) => set("propertyCost", n)}
-              placeholder="0"
-            />
+            <Label>Property Cost</Label>
+            <div className="flex min-h-11 items-center rounded-md border border-input bg-muted/30 px-3 text-base font-semibold text-foreground md:text-sm">
+              {formatINR(value.propertyCost)}
+            </div>
+            <p className="text-xs text-muted-foreground">Set in Your Home step</p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="downPayment">Your Own Contribution / Down Payment</Label>

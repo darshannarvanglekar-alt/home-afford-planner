@@ -145,18 +145,20 @@ export function StepPaymentPlan({ value, onChange, home }: Props) {
     setShowSkipHint(false);
     const loanAmt = Math.max(0, home.propertyCost - home.downPayment);
     const needsTranches = type === "pre_emi" || type === "full_emi_day1" || type === "fixed_emi_accumulated";
+    const stageCount = home.disbursementStages || 3;
     const tranches =
       needsTranches && (value.tranches.length === 0 || value.planType !== type)
-        ? generateDefaultTranches(value.trancheCount || 3, loanAmt, home.possessionMonth)
+        ? generateDefaultTranches(stageCount, loanAmt, home.possessionMonth)
         : value.tranches;
-    const fullEmi = calcEMI(loanAmt, home.interestRateA || value.interestRate, home.tenureYears || value.tenureYears);
+    const fullEmi = calcEMI(loanAmt, home.interestRateA, home.tenureYears);
     onChange({
       ...value,
       planType: type,
       tranches,
+      trancheCount: stageCount,
       loanAmount: loanAmt,
-      interestRate: home.interestRateA || value.interestRate,
-      tenureYears: home.tenureYears || value.tenureYears,
+      interestRate: home.interestRateA,
+      tenureYears: home.tenureYears,
       possessionMonth: home.possessionMonth,
       // Auto-populate step-up/down starting EMI if not set
       stepUp: {
@@ -172,17 +174,21 @@ export function StepPaymentPlan({ value, onChange, home }: Props) {
 
   React.useEffect(() => {
     const loanAmt = Math.max(0, home.propertyCost - home.downPayment);
-    if (loanAmt !== value.loanAmount || home.possessionMonth !== value.possessionMonth) {
+    const stageCount = home.disbursementStages || 3;
+    if (loanAmt !== value.loanAmount || home.possessionMonth !== value.possessionMonth || home.interestRateA !== value.interestRate || home.tenureYears !== value.tenureYears) {
+      const needsTranches = value.planType === "pre_emi" || value.planType === "full_emi_day1" || value.planType === "fixed_emi_accumulated";
       onChange({
         ...value,
         loanAmount: loanAmt,
-        interestRate: home.interestRateA || value.interestRate,
-        tenureYears: home.tenureYears || value.tenureYears,
+        interestRate: home.interestRateA,
+        tenureYears: home.tenureYears,
         possessionMonth: home.possessionMonth,
+        trancheCount: stageCount,
+        tranches: needsTranches ? generateDefaultTranches(stageCount, loanAmt, home.possessionMonth) : value.tranches,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [home.propertyCost, home.downPayment, home.possessionMonth, home.interestRateA, home.tenureYears]);
+  }, [home.propertyCost, home.downPayment, home.possessionMonth, home.interestRateA, home.tenureYears, home.disbursementStages]);
 
   const handleNextAttempt = React.useCallback(() => {
     if (!value.planType) {
@@ -361,106 +367,35 @@ export function StepPaymentPlan({ value, onChange, home }: Props) {
 // ────────────── Shared tranche UI ──────────────
 function TrancheInputs({
   value,
-  onTrancheCountChange,
-  onTrancheUpdate,
-  set,
 }: {
   value: PaymentPlanInputs;
-  onTrancheCountChange: (n: number) => void;
-  onTrancheUpdate: (id: string, patch: Partial<{ month: number; amount: number }>) => void;
-  set: <K extends keyof PaymentPlanInputs>(k: K, v: PaymentPlanInputs[K]) => void;
+  onTrancheCountChange?: (n: number) => void;
+  onTrancheUpdate?: (id: string, patch: Partial<{ month: number; amount: number }>) => void;
+  set?: <K extends keyof PaymentPlanInputs>(k: K, v: PaymentPlanInputs[K]) => void;
 }) {
-  const totalTranches = value.tranches.reduce((s, t) => s + t.amount, 0);
-  const diff = value.loanAmount - totalTranches;
-
   return (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <Label>Number of disbursement tranches</Label>
-        <div className="flex flex-wrap gap-2">
-          {[2, 3, 4, 5, 6].map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => onTrancheCountChange(n)}
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-lg border-2 text-sm font-semibold transition-colors",
-                value.trancheCount === n
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-foreground hover:border-primary/50",
-              )}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        {value.tranches.map((t) => (
-          <div
-            key={t.id}
-            className="rounded-xl border border-border bg-card p-3 shadow-soft"
-          >
-            <div className="mb-2 text-xs font-semibold text-muted-foreground">
-              {t.label}
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Disbursement month</Label>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  value={t.month}
-                  onChange={(e) =>
-                    onTrancheUpdate(t.id, {
-                      month: Math.max(1, parseInt(e.target.value) || 1),
-                    })
-                  }
-                  className="h-9"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {formatMonthLabel(t.month)}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Amount (₹)</Label>
-                <CurrencyInput
-                  value={t.amount}
-                  onValueChange={(n) => onTrancheUpdate(t.id, { amount: n })}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {Math.abs(diff) > 1 && (
-        <p className="text-xs font-medium text-destructive">
-          Tranches {diff > 0 ? "are short by" : "exceed loan by"}{" "}
-          {formatINR(Math.abs(diff))} — total must equal{" "}
-          {formatINR(value.loanAmount)}
+      {/* Read-only interest rate display (Fix 1) */}
+      <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
+        <p className="text-sm text-foreground">
+          Using your loan interest rate:{" "}
+          <span className="font-bold text-primary">{value.interestRate}%</span>{" "}
+          <span className="text-xs text-muted-foreground">(edit in Your Loan step)</span>
         </p>
-      )}
+      </div>
 
-      <div className="space-y-1.5 sm:max-w-xs">
-        <Label>Annual interest rate (%)</Label>
-        <Input
-          type="number"
-          inputMode="decimal"
-          step="0.01"
-          min={0}
-          max={50}
-          value={value.interestRate || ""}
-          onChange={(e) => {
-            const n = parseFloat(e.target.value);
-            set("interestRate", Number.isFinite(n) ? n : 0);
-          }}
-          placeholder="8.5"
-          className="h-9"
-        />
+      {/* Equal disbursement summary (Fix 4) */}
+      <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 space-y-2">
+        <p className="text-sm font-semibold text-foreground">
+          Disbursement: {value.trancheCount} equal stages
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {formatINR(Math.round(value.loanAmount / (value.trancheCount || 3)))} per stage,
+          spread across {value.possessionMonth} months of construction.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          We assume equal disbursement across stages. This gives a close approximation for planning purposes.
+        </p>
       </div>
     </div>
   );
@@ -493,12 +428,7 @@ function PreEmiInputs({
       <h2 className="text-base font-semibold text-foreground">
         Pre-EMI Plan Details
       </h2>
-      <TrancheInputs
-        value={value}
-        onTrancheCountChange={onTrancheCountChange}
-        onTrancheUpdate={onTrancheUpdate}
-        set={set}
-      />
+      <TrancheInputs value={value} />
 
       {rows.length > 0 && (
         <div className="space-y-3">
@@ -570,12 +500,7 @@ function FullEmiInputs({
       <h2 className="text-base font-semibold text-foreground">
         Full EMI From Day 1 — Details
       </h2>
-      <TrancheInputs
-        value={value}
-        onTrancheCountChange={onTrancheCountChange}
-        onTrancheUpdate={onTrancheUpdate}
-        set={set}
-      />
+      <TrancheInputs value={value} />
 
       <div className="rounded-xl bg-primary/10 px-4 py-3 text-center">
         <p className="text-xs font-medium uppercase tracking-wide text-primary/80">
@@ -746,12 +671,7 @@ function FixedEmiInputs({
         />
       </div>
 
-      <TrancheInputs
-        value={value}
-        onTrancheCountChange={onTrancheCountChange}
-        onTrancheUpdate={onTrancheUpdate}
-        set={set}
-      />
+      <TrancheInputs value={value} />
 
       {rows.length > 0 && (
         <div className="space-y-3">

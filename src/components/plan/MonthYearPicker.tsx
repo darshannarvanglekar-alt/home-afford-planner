@@ -81,8 +81,8 @@ export function MonthYearPicker({
         inputMode="numeric"
         type="number"
         placeholder="Year"
-        min={today.getFullYear()}
-        max={today.getFullYear() + 50}
+        min={2020}
+        max={2045}
         value={yearStr}
         onChange={(e) => update(monthStr || "01", e.target.value)}
       />

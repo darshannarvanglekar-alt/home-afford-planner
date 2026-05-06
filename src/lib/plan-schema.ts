@@ -101,10 +101,12 @@ export const homeSchema = z.object({
   propertyCost: num,
   downPayment: num,
   city: z.string().default(""),
+  builderName: z.string().default(""),
   interestRateA: z.number().min(0).max(50).default(8.5),
   interestRateB: z.number().min(0).max(50).optional(),
   tenureYears: z.number().int().min(1).max(40).default(20),
   builderStages: z.array(builderStageSchema).default([]),
+  disbursementStages: z.number().int().min(2).max(6).default(3),
   registrationStampDuty: num,
   interiorBudget: num,
   possessionMonth: z.number().int().min(1).max(60).default(1),
@@ -116,6 +118,7 @@ export const defaultHome: Home = {
   propertyCost: 0,
   downPayment: 0,
   city: "",
+  builderName: "",
   interestRateA: 8.5,
   interestRateB: undefined,
   tenureYears: 20,
@@ -123,6 +126,7 @@ export const defaultHome: Home = {
     { id: "s1", name: "Stage 1", month: 1, bankPays: 0, youPay: 0 },
     { id: "s2", name: "Stage 2", month: 13, bankPays: 0, youPay: 0 },
   ],
+  disbursementStages: 3,
   registrationStampDuty: 0,
   interiorBudget: 0,
   possessionMonth: 1,
@@ -492,6 +496,81 @@ export function summarizeInvestments(investments: CurrentInvestment[], monthsToT
     ),
   };
 }
+
+// Maturity-aware corpus breakdown for possession date (Fix 3)
+export function summarizeInvestmentsForPossession(
+  investments: CurrentInvestment[],
+  possessionMonths: number,
+) {
+  const availableAtPossession: Array<{
+    inv: CurrentInvestment;
+    value: number;
+    status: "matured_before" | "accumulated" | "matured_after";
+    maturityMonth: number | null;
+  }> = [];
+
+  let corpusAvailable = 0;
+  let corpusAfterPossession = 0;
+
+  for (const inv of investments) {
+    // Pure protection — no corpus
+    if (inv.type === "protection_plan" && insuranceIsPureProtection(inv.insuranceSubtype)) continue;
+    if (insuranceIsAnnuity(inv.insuranceSubtype)) continue;
+
+    // Insurance with returns — check maturity date
+    if (inv.type === "protection_plan" && insuranceHasReturns(inv.insuranceSubtype)) {
+      const m = monthsUntilEndDate(inv.maturityDate);
+      if (m === null) continue;
+      const maturityValue = inv.maturityValue ?? 0;
+      if (m <= possessionMonths) {
+        corpusAvailable += maturityValue;
+        availableAtPossession.push({ inv, value: maturityValue, status: "matured_before", maturityMonth: m });
+      } else {
+        corpusAfterPossession += maturityValue;
+        availableAtPossession.push({ inv, value: maturityValue, status: "matured_after", maturityMonth: m });
+      }
+      continue;
+    }
+
+    // Regular investments — check monthsRemaining
+    const current = estimateInvestmentCurrentValue(inv);
+    const totalMonths = possessionMonths;
+
+    if (!inv.continuing || isLumpSumInvestment(inv.type)) {
+      // Lump sum or stopped — just grows at assumed rate
+      const projected = futureValueAmount(current, inv.assumedReturn, totalMonths);
+      corpusAvailable += projected;
+      availableAtPossession.push({ inv, value: projected, status: "matured_before", maturityMonth: null });
+    } else {
+      // Continuing investment
+      const monthsContributing = Math.min(totalMonths, inv.monthsRemaining);
+      const carried = futureValueAmount(current, inv.assumedReturn, totalMonths);
+      const monthly = investmentMonthlyContribution(inv);
+      const newContributions = futureValueSeries(monthly, inv.assumedReturn, monthsContributing);
+      const totalValue = carried + newContributions;
+
+      if (monthsContributing >= totalMonths) {
+        // Still running at possession — show accumulated value
+        corpusAvailable += totalValue;
+        availableAtPossession.push({ inv, value: totalValue, status: "accumulated", maturityMonth: null });
+      } else {
+        // Matures before possession — full value available
+        corpusAvailable += totalValue;
+        availableAtPossession.push({ inv, value: totalValue, status: "matured_before", maturityMonth: monthsContributing });
+      }
+    }
+  }
+
+  return {
+    corpusAvailable,
+    corpusAfterPossession,
+    items: availableAtPossession,
+    monthlyCommitment: investments
+      .filter((item) => !isLumpSumInvestment(item.type) && item.continuing)
+      .reduce((sum, item) => sum + investmentMonthlyContribution(item), 0),
+    currentCorpus: investments.reduce((sum, item) => sum + estimateInvestmentCurrentValue(item), 0),
+  };
+}
 function futureValueSeries(monthly: number, annualRate: number, months: number) {
   let value = 0;
   const r = annualRate / 12 / 100;
@@ -573,6 +652,12 @@ export interface AffordabilityPlan {
   emiToIncomePct: number;
   emergencyFundNeeded: number;
   layerScores: AffordabilityLayerScore[];
+  // Fix 6: Pre/post possession outflow breakdown
+  currentMonthlyOutflow: number; // pre-EMI / payment plan outflow now
+  fullEmiAfterPossession: number;
+  currentSurplus: number;
+  surplusAfterPossession: number;
+  isUnderConstruction: boolean;
 }
 
 function scoreByRatio(ratio: number, thresholds: Array<[number, number]>): number {
@@ -634,6 +719,20 @@ export function calculateAffordabilityPlan(
     awfMonthly(finances.expenses.daily);
   const investmentRatio = surplusAfterEmi > 0 ? 2 : 0;
 
+  // Fix 6: Pre/post possession breakdown
+  const isUnderConstruction = home.propertyType === "construction";
+  // For under-construction, the current outflow is pre-EMI interest on first disbursement
+  // approximation: interest on (loanAmount / disbursementStages) for first tranche
+  const loan = loanAmount(home);
+  const stages = home.disbursementStages || 3;
+  const preEmiInterest = isUnderConstruction
+    ? (loan / stages) * (home.interestRateA / 12 / 100)
+    : 0;
+  const currentMonthlyOutflow = isUnderConstruction ? preEmiInterest : newEmi;
+  const fullEmiAfterPossession = newEmi;
+  const currentSurplus = surplusBeforeEmi - currentMonthlyOutflow;
+  const surplusAfterPossession = surplusBeforeEmi - fullEmiAfterPossession;
+
   return {
     verdict,
     headline,
@@ -645,6 +744,11 @@ export function calculateAffordabilityPlan(
     surplusAfterEmi,
     emiToIncomePct,
     emergencyFundNeeded,
+    currentMonthlyOutflow,
+    fullEmiAfterPossession,
+    currentSurplus,
+    surplusAfterPossession,
+    isUnderConstruction,
     layerScores: [
       {
         name: "Layer 1 — Survival Check",

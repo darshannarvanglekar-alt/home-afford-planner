@@ -179,9 +179,16 @@ export function Step4Plan({
             <Pencil className="h-4 w-4 shrink-0 text-muted-foreground" />
           </button>
         )}
-        <p className="mt-2 text-sm text-muted-foreground">
-          Here is how this home purchase fits your monthly cash flow.
-        </p>
+        {/* Fix 5: contextual subheading based on property type */}
+        {home.propertyType === "construction" && home.possessionMonth > 3 ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Your plan for an under-construction home{home.city ? ` in ${home.city}` : ""} — expected possession in Month {home.possessionMonth}.
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Here is how this home purchase fits your monthly cash flow.
+          </p>
+        )}
         {plan.surplusBeforeEmi <= 0 ? (
           <p className="mt-2 text-sm font-semibold text-destructive">
             Your current expenses exceed your income. Please review your numbers.
@@ -225,12 +232,31 @@ export function Step4Plan({
       </section>
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard label="Monthly EMI" value={formatINR(plan.newEmi)} />
-        <MetricCard
-          label="Monthly Surplus"
-          value={formatINR(plan.surplusAfterEmi)}
-          valueClassName={plan.surplusAfterEmi >= 0 ? "text-success" : "text-destructive"}
-        />
+        {plan.isUnderConstruction ? (
+          <>
+            <MetricCard label="Current Monthly Outflow" value={formatINR(plan.currentMonthlyOutflow)} />
+            <MetricCard label="Full EMI After Possession" value={formatINR(plan.fullEmiAfterPossession)} />
+            <MetricCard
+              label="Current Surplus"
+              value={formatINR(plan.currentSurplus)}
+              valueClassName={plan.currentSurplus >= 0 ? "text-success" : "text-destructive"}
+            />
+            <MetricCard
+              label="Surplus After Possession"
+              value={formatINR(plan.surplusAfterPossession)}
+              valueClassName={plan.surplusAfterPossession >= 0 ? "text-success" : "text-destructive"}
+            />
+          </>
+        ) : (
+          <>
+            <MetricCard label="Monthly EMI" value={formatINR(plan.newEmi)} />
+            <MetricCard
+              label="Monthly Surplus"
+              value={formatINR(plan.surplusAfterEmi)}
+              valueClassName={plan.surplusAfterEmi >= 0 ? "text-success" : "text-destructive"}
+            />
+          </>
+        )}
         <MetricCard
           label="EMI to Income Ratio"
           value={`${plan.emiToIncomePct.toFixed(1)}%`}
