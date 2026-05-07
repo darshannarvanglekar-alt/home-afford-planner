@@ -787,10 +787,10 @@ function CorpusBuilder({
     home.downPayment + home.registrationStampDuty + home.interiorBudget,
   );
   const existing = React.useMemo(
-    () => summarizeInvestments(investments, home.possessionMonth),
+    () => summarizeInvestmentsForPossession(investments, home.possessionMonth),
     [investments, home.possessionMonth],
   );
-  const additionalNeeded = Math.max(0, targetDefault - existing.projectedCorpus);
+  const additionalNeeded = Math.max(0, targetDefault - existing.corpusAvailable);
   const [target, setTarget] = React.useState(targetDefault);
   const [timeline, setTimeline] = React.useState(Math.max(1, home.possessionMonth));
   const [allocations, setAllocations] = React.useState<RouteAllocation[]>([
