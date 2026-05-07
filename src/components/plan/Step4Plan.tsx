@@ -406,8 +406,8 @@ function SmartSuggestionsPanel({
         100000,
         home.downPayment + home.registrationStampDuty + home.interiorBudget,
       );
-      const currentInvestmentSummary = summarizeInvestments(investments, home.possessionMonth);
-      const projectedCorpus = currentInvestmentSummary.projectedCorpus;
+      const currentInvestmentSummary = summarizeInvestmentsForPossession(investments, home.possessionMonth);
+      const projectedCorpus = currentInvestmentSummary.corpusAvailable;
       const response = await fetch("/api/generate-plan-suggestions", {
         method: "POST",
         headers: {
@@ -423,10 +423,11 @@ function SmartSuggestionsPanel({
             surplus: plan.surplusAfterEmi,
             investments: currentInvestmentSummary.monthlyCommitment,
             existingInvestmentCorpusToday: currentInvestmentSummary.currentCorpus,
-            existingInvestmentProjectedCorpus: currentInvestmentSummary.projectedCorpus,
+            existingInvestmentProjectedCorpus: currentInvestmentSummary.corpusAvailable,
+            existingInvestmentCorpusAfterPossession: currentInvestmentSummary.corpusAfterPossession,
             existingInvestmentCoveragePct:
               targetCorpus > 0
-                ? Math.min(100, (currentInvestmentSummary.projectedCorpus / targetCorpus) * 100)
+                ? Math.min(100, (currentInvestmentSummary.corpusAvailable / targetCorpus) * 100)
                 : 0,
             targetCorpus,
             projectedCorpus,
