@@ -51,6 +51,7 @@ import {
   loanAmount,
   type Profile,
   summarizeInvestments,
+  summarizeInvestmentsForPossession,
   surplusAtOffset,
   totalEmiList,
   totalExpenses,
@@ -108,7 +109,7 @@ export function Step4Plan({
     [finances, home, profile],
   );
   const investmentSummary = React.useMemo(
-    () => summarizeInvestments(investments, home.possessionMonth),
+    () => summarizeInvestmentsForPossession(investments, home.possessionMonth),
     [investments, home.possessionMonth],
   );
   const targetCorpus = Math.max(
@@ -116,8 +117,8 @@ export function Step4Plan({
     home.downPayment + home.registrationStampDuty + home.interiorBudget,
   );
   const corpusCoveredPct =
-    targetCorpus > 0 ? Math.min(100, (investmentSummary.projectedCorpus / targetCorpus) * 100) : 0;
-  const additionalCorpusNeeded = Math.max(0, targetCorpus - investmentSummary.projectedCorpus);
+    targetCorpus > 0 ? Math.min(100, (investmentSummary.corpusAvailable / targetCorpus) * 100) : 0;
+  const additionalCorpusNeeded = Math.max(0, targetCorpus - investmentSummary.corpusAvailable);
   const verdictTone = {
     safe: {
       label: "SAFE",
