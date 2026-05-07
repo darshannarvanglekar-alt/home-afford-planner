@@ -225,9 +225,15 @@ export function Step4Plan({
           <li>• EMI as % of income: {plan.emiToIncomePct.toFixed(1)}%</li>
           <li>• Emergency fund: {plan.emergencyStatus}</li>
           <li>
-            • Existing investments projected corpus by possession / purchase date:{" "}
-            {formatINR(investmentSummary.projectedCorpus)}
+            • Available at possession:{" "}
+            {formatINR(investmentSummary.corpusAvailable)}
           </li>
+          {investmentSummary.corpusAfterPossession > 0 && (
+            <li>
+              • Maturing after possession (not available for down payment):{" "}
+              {formatINR(investmentSummary.corpusAfterPossession)}
+            </li>
+          )}
           <li>• Additional corpus needed: {formatINR(additionalCorpusNeeded)}</li>
         </ul>
       </section>
