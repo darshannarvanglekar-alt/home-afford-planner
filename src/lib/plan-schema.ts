@@ -730,8 +730,15 @@ export function calculateAffordabilityPlan(
     : 0;
   const currentMonthlyOutflow = isUnderConstruction ? preEmiInterest : newEmi;
   const fullEmiAfterPossession = newEmi;
-  const currentSurplus = surplusBeforeEmi - currentMonthlyOutflow;
-  const surplusAfterPossession = surplusBeforeEmi - fullEmiAfterPossession;
+  const currentSurplus = isUnderConstruction
+    ? totalIncome(finances) - totalExpenses(finances) - totalCommitments(finances, 0) - preEmiInterest
+    : surplusAfterEmi;
+  const possessionOffset = home.possessionMonth ?? 1;
+  const surplusAfterPossession =
+    totalIncome(finances)
+    - totalExpenses(finances)
+    - totalCommitments(finances, possessionOffset)
+    - fullEmiAfterPossession;
 
   return {
     verdict,

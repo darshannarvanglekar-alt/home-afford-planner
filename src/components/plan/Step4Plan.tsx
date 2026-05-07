@@ -50,7 +50,7 @@ import {
   insuranceMaturityEvents,
   loanAmount,
   type Profile,
-  summarizeInvestments,
+  summarizeInvestmentsForPossession,
   surplusAtOffset,
   totalEmiList,
   totalExpenses,
@@ -108,7 +108,7 @@ export function Step4Plan({
     [finances, home, profile],
   );
   const investmentSummary = React.useMemo(
-    () => summarizeInvestments(investments, home.possessionMonth),
+    () => summarizeInvestmentsForPossession(investments, home.possessionMonth),
     [investments, home.possessionMonth],
   );
   const targetCorpus = Math.max(
@@ -116,8 +116,8 @@ export function Step4Plan({
     home.downPayment + home.registrationStampDuty + home.interiorBudget,
   );
   const corpusCoveredPct =
-    targetCorpus > 0 ? Math.min(100, (investmentSummary.projectedCorpus / targetCorpus) * 100) : 0;
-  const additionalCorpusNeeded = Math.max(0, targetCorpus - investmentSummary.projectedCorpus);
+    targetCorpus > 0 ? Math.min(100, (investmentSummary.corpusAvailable / targetCorpus) * 100) : 0;
+  const additionalCorpusNeeded = Math.max(0, targetCorpus - investmentSummary.corpusAvailable);
   const verdictTone = {
     safe: {
       label: "SAFE",
@@ -224,9 +224,15 @@ export function Step4Plan({
           <li>• EMI as % of income: {plan.emiToIncomePct.toFixed(1)}%</li>
           <li>• Emergency fund: {plan.emergencyStatus}</li>
           <li>
-            • Existing investments projected corpus by possession / purchase date:{" "}
-            {formatINR(investmentSummary.projectedCorpus)}
+            • Available at possession:{" "}
+            {formatINR(investmentSummary.corpusAvailable)}
           </li>
+          {investmentSummary.corpusAfterPossession > 0 && (
+            <li>
+              • Maturing after possession (not available for down payment):{" "}
+              {formatINR(investmentSummary.corpusAfterPossession)}
+            </li>
+          )}
           <li>• Additional corpus needed: {formatINR(additionalCorpusNeeded)}</li>
         </ul>
       </section>
@@ -399,8 +405,8 @@ function SmartSuggestionsPanel({
         100000,
         home.downPayment + home.registrationStampDuty + home.interiorBudget,
       );
-      const currentInvestmentSummary = summarizeInvestments(investments, home.possessionMonth);
-      const projectedCorpus = currentInvestmentSummary.projectedCorpus;
+      const currentInvestmentSummary = summarizeInvestmentsForPossession(investments, home.possessionMonth);
+      const projectedCorpus = currentInvestmentSummary.corpusAvailable;
       const response = await fetch("/api/generate-plan-suggestions", {
         method: "POST",
         headers: {
@@ -416,10 +422,11 @@ function SmartSuggestionsPanel({
             surplus: plan.surplusAfterEmi,
             investments: currentInvestmentSummary.monthlyCommitment,
             existingInvestmentCorpusToday: currentInvestmentSummary.currentCorpus,
-            existingInvestmentProjectedCorpus: currentInvestmentSummary.projectedCorpus,
+            existingInvestmentProjectedCorpus: currentInvestmentSummary.corpusAvailable,
+            existingInvestmentCorpusAfterPossession: currentInvestmentSummary.corpusAfterPossession,
             existingInvestmentCoveragePct:
               targetCorpus > 0
-                ? Math.min(100, (currentInvestmentSummary.projectedCorpus / targetCorpus) * 100)
+                ? Math.min(100, (currentInvestmentSummary.corpusAvailable / targetCorpus) * 100)
                 : 0,
             targetCorpus,
             projectedCorpus,
@@ -779,10 +786,10 @@ function CorpusBuilder({
     home.downPayment + home.registrationStampDuty + home.interiorBudget,
   );
   const existing = React.useMemo(
-    () => summarizeInvestments(investments, home.possessionMonth),
+    () => summarizeInvestmentsForPossession(investments, home.possessionMonth),
     [investments, home.possessionMonth],
   );
-  const additionalNeeded = Math.max(0, targetDefault - existing.projectedCorpus);
+  const additionalNeeded = Math.max(0, targetDefault - existing.corpusAvailable);
   const [target, setTarget] = React.useState(targetDefault);
   const [timeline, setTimeline] = React.useState(Math.max(1, home.possessionMonth));
   const [allocations, setAllocations] = React.useState<RouteAllocation[]>([
@@ -811,12 +818,12 @@ function CorpusBuilder({
       buildCombinedProjection(
         allocations,
         timeline,
-        existing.projectedCorpus,
+        existing.corpusAvailable,
         target,
         emiEvents,
         maturityEvents,
       ),
-    [allocations, timeline, existing.projectedCorpus, target, emiEvents, maturityEvents],
+    [allocations, timeline, existing.corpusAvailable, target, emiEvents, maturityEvents],
   );
   const totalMonthly = allocations.reduce(
     (sum, item) => sum + (isMonthlyRoute(item.id) ? item.amount : 0),
@@ -865,8 +872,8 @@ function CorpusBuilder({
         </div>
 
         <div className="mt-5 rounded-2xl border border-primary/20 bg-primary-soft p-4 text-sm font-semibold text-primary-soft-foreground">
-          Your existing investments are already building {formatINR(existing.projectedCorpus)}{" "}
-          toward your target. You need {formatINR(Math.max(0, target - existing.projectedCorpus))}{" "}
+          Your existing investments are already building {formatINR(existing.corpusAvailable)}{" "}
+          toward your target. You need {formatINR(Math.max(0, target - existing.corpusAvailable))}{" "}
           more.
         </div>
 
@@ -902,7 +909,7 @@ function CorpusBuilder({
           <MetricCard label="Current Savings" value={formatINR(existing.currentCorpus)} />
           <MetricCard
             label="Existing Corpus by Target Date"
-            value={formatINR(existing.projectedCorpus)}
+            value={formatINR(existing.corpusAvailable)}
             valueClassName="text-success"
           />
           <MetricCard label="Additional Corpus Needed" value={formatINR(additionalNeeded)} />
