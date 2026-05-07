@@ -50,7 +50,6 @@ import {
   insuranceMaturityEvents,
   loanAmount,
   type Profile,
-  summarizeInvestments,
   summarizeInvestmentsForPossession,
   surplusAtOffset,
   totalEmiList,
