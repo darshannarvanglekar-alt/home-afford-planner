@@ -819,12 +819,12 @@ function CorpusBuilder({
       buildCombinedProjection(
         allocations,
         timeline,
-        existing.projectedCorpus,
+        existing.corpusAvailable,
         target,
         emiEvents,
         maturityEvents,
       ),
-    [allocations, timeline, existing.projectedCorpus, target, emiEvents, maturityEvents],
+    [allocations, timeline, existing.corpusAvailable, target, emiEvents, maturityEvents],
   );
   const totalMonthly = allocations.reduce(
     (sum, item) => sum + (isMonthlyRoute(item.id) ? item.amount : 0),
@@ -873,8 +873,8 @@ function CorpusBuilder({
         </div>
 
         <div className="mt-5 rounded-2xl border border-primary/20 bg-primary-soft p-4 text-sm font-semibold text-primary-soft-foreground">
-          Your existing investments are already building {formatINR(existing.projectedCorpus)}{" "}
-          toward your target. You need {formatINR(Math.max(0, target - existing.projectedCorpus))}{" "}
+          Your existing investments are already building {formatINR(existing.corpusAvailable)}{" "}
+          toward your target. You need {formatINR(Math.max(0, target - existing.corpusAvailable))}{" "}
           more.
         </div>
 
@@ -910,7 +910,7 @@ function CorpusBuilder({
           <MetricCard label="Current Savings" value={formatINR(existing.currentCorpus)} />
           <MetricCard
             label="Existing Corpus by Target Date"
-            value={formatINR(existing.projectedCorpus)}
+            value={formatINR(existing.corpusAvailable)}
             valueClassName="text-success"
           />
           <MetricCard label="Additional Corpus Needed" value={formatINR(additionalNeeded)} />
