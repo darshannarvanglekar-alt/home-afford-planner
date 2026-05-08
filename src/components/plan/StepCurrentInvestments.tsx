@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { CurrencyInput } from "./CurrencyInput";
 import { FrequencySelect } from "./FrequencySelect";
-import { MonthYearPicker } from "./MonthYearPicker";
+import { MonthYearPicker, monthsBetween, todayYM } from "./MonthYearPicker";
 import { cn } from "@/lib/utils";
 import {
   formatINR,
@@ -130,6 +130,20 @@ export function StepCurrentInvestments({ value, possessionMonth, onChange }: Pro
   );
 }
 
+/** Derive a YYYY-MM string that is `months` months before today */
+function ymMinusMonths(months: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Derive a YYYY-MM string that is `months` months after today */
+function ymPlusMonths(months: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + months);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function InvestmentRow({
   investment,
   index,
@@ -143,6 +157,7 @@ function InvestmentRow({
 }) {
   const lumpSum = isLumpSumInvestment(investment.type);
   const isInsurance = investment.type === "protection_plan";
+  const isPPF = investment.type === "ppf_style";
   const subtype = investment.insuranceSubtype;
   const showReturns = isInsurance && insuranceHasReturns(subtype);
   const showAnnuity = isInsurance && insuranceIsAnnuity(subtype);
@@ -151,6 +166,14 @@ function InvestmentRow({
   const monthlyEq = !lumpSum && investment.amount > 0
     ? monthlyEquivalent(investment.amount, frequency)
     : 0;
+
+  // Derive start/end date from monthsRunning/monthsRemaining for initial display
+  const startDateDerived = investment.monthsRunning > 0
+    ? ymMinusMonths(investment.monthsRunning)
+    : undefined;
+  const endDateDerived = investment.monthsRemaining > 0
+    ? ymPlusMonths(investment.monthsRemaining)
+    : undefined;
 
   return (
     <article className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
@@ -190,7 +213,7 @@ function InvestmentRow({
           </select>
         </label>
 
-        {/* Insurance subtype radios (Change 6) */}
+        {/* Insurance subtype radios */}
         {isInsurance && (
           <div className="sm:col-span-2 rounded-xl border border-border bg-muted/25 p-3">
             <p className="text-sm font-semibold text-foreground">Insurance type</p>
@@ -263,50 +286,16 @@ function InvestmentRow({
           </div>
         ) : null}
 
-        {/* Standard recurring fields — hidden for pure-protection insurance and annuity */}
-        {!showProtectionOnly && !showAnnuity && (
-          <>
-            <NumberField
-              label="Assumed annual return (%)"
-              value={investment.assumedReturn}
-              onChange={(assumedReturn) => onUpdate({ assumedReturn })}
-              step="0.1"
-            />
-            <NumberField
-              label="How many months has this been running?"
-              value={investment.monthsRunning}
-              onChange={(monthsRunning) => onUpdate({ monthsRunning })}
-            />
-          </>
-        )}
-
-        {/* Continuing toggle (not relevant for pure-protection or annuity) */}
-        {!showProtectionOnly && !showAnnuity && (
-          <div className="sm:col-span-2 rounded-xl border border-border bg-muted/25 p-3">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-foreground">
-                Is this investment continuing?
-              </span>
-              <Switch
-                checked={investment.continuing}
-                onCheckedChange={(continuing) => onUpdate({ continuing })}
-              />
-            </div>
-            {investment.continuing && !lumpSum ? (
-              <NumberField
-                className="mt-4"
-                label="How many more months will it continue?"
-                value={investment.monthsRemaining}
-                onChange={(monthsRemaining) => onUpdate({ monthsRemaining })}
-              />
-            ) : null}
-          </div>
-        )}
-
-        {/* Pure-protection insurance: policy end / renewal date only */}
-        {showProtectionOnly && (
+        {/* ──────────────────────────────────────────────
+            INSURANCE: hide monthsRunning/monthsRemaining/continuing
+            Show policyEndDate for ALL insurance types
+            ────────────────────────────────────────────── */}
+        {isInsurance && (
           <div className="sm:col-span-2 rounded-xl border border-border bg-muted/25 p-3">
             <p className="text-sm font-semibold text-foreground">Policy end / renewal date</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              When does the current policy term end or renew?
+            </p>
             <div className="mt-2">
               <MonthYearPicker
                 value={investment.policyEndDate}
@@ -314,28 +303,25 @@ function InvestmentRow({
                 ariaLabel="Policy end date"
               />
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              This is treated as a monthly protection cost in your surplus calculation. It does not
-              contribute to corpus.
-            </p>
+            {showProtectionOnly && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                This is treated as a monthly protection cost in your surplus calculation. It does not
+                contribute to corpus.
+              </p>
+            )}
           </div>
         )}
 
         {/* Insurance with returns: maturity inputs */}
         {showReturns && (
           <div className="sm:col-span-2 grid gap-4 rounded-xl border border-border bg-muted/25 p-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="text-sm font-semibold text-foreground">
-                Expected maturity value (₹)
-              </span>
-              <CurrencyInput
-                className="mt-2"
-                value={investment.maturityValue ?? 0}
-                onValueChange={(maturityValue) => onUpdate({ maturityValue })}
-              />
-            </label>
             <div>
-              <p className="text-sm font-semibold text-foreground">Maturity date</p>
+              <p className="text-sm font-semibold text-foreground">
+                Maturity date (when you receive the corpus)
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                The date the policy pays out. This is usually LATER than the end date.
+              </p>
               <div className="mt-2">
                 <MonthYearPicker
                   value={investment.maturityDate}
@@ -344,6 +330,19 @@ function InvestmentRow({
                 />
               </div>
             </div>
+            <label className="block">
+              <span className="text-sm font-semibold text-foreground">
+                Expected maturity value (₹)
+              </span>
+              <p className="mt-1 text-xs text-muted-foreground">
+                The lump sum you expect to receive at maturity.
+              </p>
+              <CurrencyInput
+                className="mt-2"
+                value={investment.maturityValue ?? 0}
+                onValueChange={(maturityValue) => onUpdate({ maturityValue })}
+              />
+            </label>
             <NumberField
               label="Assumed annual return (%)"
               value={investment.assumedReturn}
@@ -362,7 +361,7 @@ function InvestmentRow({
           <div className="sm:col-span-2 grid gap-4 rounded-xl border border-border bg-muted/25 p-3 sm:grid-cols-2">
             <label className="block">
               <span className="text-sm font-semibold text-foreground">
-                Expected monthly income from policy (₹)
+                Monthly income amount (₹)
               </span>
               <CurrencyInput
                 className="mt-2"
@@ -384,6 +383,113 @@ function InvestmentRow({
               Treated as a future monthly income source in post-possession cash flow.
             </p>
           </div>
+        )}
+
+        {/* ──────────────────────────────────────────────
+            PPF-STYLE: show return rate, start date, maturity date
+            Hide monthsRunning/monthsRemaining number inputs
+            ────────────────────────────────────────────── */}
+        {isPPF && (
+          <>
+            <NumberField
+              label="Assumed annual return (%)"
+              value={investment.assumedReturn}
+              onChange={(assumedReturn) => onUpdate({ assumedReturn })}
+              step="0.1"
+            />
+            <div className="sm:col-span-2 grid gap-4 rounded-xl border border-border bg-muted/25 p-3 sm:grid-cols-2">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Account start date</p>
+                <div className="mt-2">
+                  <MonthYearPicker
+                    value={startDateDerived}
+                    onChange={(v) => {
+                      const months = monthsBetween(v, todayYM());
+                      onUpdate({ monthsRunning: Math.max(0, months) });
+                    }}
+                    ariaLabel="Account start date"
+                  />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Maturity date</p>
+                <div className="mt-2">
+                  <MonthYearPicker
+                    value={endDateDerived}
+                    onChange={(v) => {
+                      const months = monthsBetween(todayYM(), v);
+                      onUpdate({ monthsRemaining: Math.max(0, months) });
+                    }}
+                    ariaLabel="Maturity date"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                SSY matures when the girl child turns 21. PPF matures at 15 years.
+              </p>
+            </div>
+            {/* Continuing toggle for PPF */}
+            <div className="sm:col-span-2 rounded-xl border border-border bg-muted/25 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-foreground">
+                  Is this investment continuing?
+                </span>
+                <Switch
+                  checked={investment.continuing}
+                  onCheckedChange={(continuing) => onUpdate({ continuing })}
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ──────────────────────────────────────────────
+            STANDARD NON-INSURANCE, NON-PPF INVESTMENTS
+            Show return rate + start date picker + continuing
+            ────────────────────────────────────────────── */}
+        {!isInsurance && !isPPF && (
+          <>
+            <NumberField
+              label="Assumed annual return (%)"
+              value={investment.assumedReturn}
+              onChange={(assumedReturn) => onUpdate({ assumedReturn })}
+              step="0.1"
+            />
+            <div>
+              <p className="text-sm font-semibold text-foreground">Start date</p>
+              <div className="mt-2">
+                <MonthYearPicker
+                  value={startDateDerived}
+                  onChange={(v) => {
+                    const months = monthsBetween(v, todayYM());
+                    onUpdate({ monthsRunning: Math.max(0, months) });
+                  }}
+                  ariaLabel="Investment start date"
+                />
+              </div>
+            </div>
+
+            {/* Continuing toggle */}
+            <div className="sm:col-span-2 rounded-xl border border-border bg-muted/25 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-foreground">
+                  Is this investment continuing?
+                </span>
+                <Switch
+                  checked={investment.continuing}
+                  onCheckedChange={(continuing) => onUpdate({ continuing })}
+                />
+              </div>
+              {investment.continuing && !lumpSum ? (
+                <NumberField
+                  className="mt-4"
+                  label="How many more months will it continue?"
+                  value={investment.monthsRemaining}
+                  onChange={(monthsRemaining) => onUpdate({ monthsRemaining })}
+                />
+              ) : null}
+            </div>
+          </>
         )}
       </div>
     </article>
