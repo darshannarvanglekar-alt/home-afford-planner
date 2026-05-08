@@ -34,6 +34,20 @@ export function formatYearMonth(value: string | undefined): string {
   return `${MONTHS[p.month - 1]} ${p.year}`;
 }
 
+/** Months between two YYYY-MM strings (positive if b > a) */
+export function monthsBetween(a: string | undefined, b: string | undefined): number {
+  const pa = parse(a);
+  const pb = parse(b);
+  if (!pa || !pb) return 0;
+  return (pb.year - pa.year) * 12 + (pb.month - pa.month);
+}
+
+/** Today as YYYY-MM */
+export function todayYM(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export function MonthYearPicker({
   value,
   onChange,
@@ -45,23 +59,55 @@ export function MonthYearPicker({
 }) {
   const parsed = parse(value);
   const today = new Date();
-  const monthStr = parsed ? String(parsed.month).padStart(2, "0") : "";
-  const yearStr = parsed ? String(parsed.year) : "";
+  const currentYear = today.getFullYear();
 
-  const update = (mm: string, yy: string) => {
-    if (!mm || !yy) {
-      onChange(undefined);
+  // Keep year in a ref so month changes don't reset it
+  const yearRef = React.useRef(parsed?.year ?? currentYear);
+  const [monthStr, setMonthStr] = React.useState(
+    parsed ? String(parsed.month).padStart(2, "0") : "",
+  );
+  const [yearInput, setYearInput] = React.useState(
+    parsed ? String(parsed.year) : "",
+  );
+
+  // Sync from external value changes
+  React.useEffect(() => {
+    const p = parse(value);
+    if (p) {
+      yearRef.current = p.year;
+      setMonthStr(String(p.month).padStart(2, "0"));
+      setYearInput(String(p.year));
+    }
+  }, [value]);
+
+  const emit = (mm: string, yy: number) => {
+    if (!mm || !Number.isFinite(yy) || yy < 2020 || yy > 2060) {
       return;
     }
-    onChange(`${yy}-${mm}`);
+    const yyStr = String(yy);
+    onChange(`${yyStr}-${mm}`);
+  };
+
+  const handleMonthChange = (mm: string) => {
+    setMonthStr(mm);
+    emit(mm, yearRef.current);
+  };
+
+  const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setYearInput(raw);
+    const y = parseInt(raw, 10);
+    if (y >= 2020 && y <= 2060) {
+      yearRef.current = y;
+      if (monthStr) {
+        emit(monthStr, y);
+      }
+    }
   };
 
   return (
     <div className="flex gap-2" aria-label={ariaLabel}>
-      <Select
-        value={monthStr}
-        onValueChange={(v) => update(v, yearStr || String(today.getFullYear()))}
-      >
+      <Select value={monthStr} onValueChange={handleMonthChange}>
         <SelectTrigger className="min-h-11">
           <SelectValue placeholder="Month" />
         </SelectTrigger>
@@ -82,9 +128,10 @@ export function MonthYearPicker({
         type="number"
         placeholder="Year"
         min={2020}
-        max={2045}
-        value={yearStr}
-        onChange={(e) => update(monthStr || "01", e.target.value)}
+        max={2060}
+        value={yearInput}
+        onChange={handleYearChange}
+        onKeyDown={(e) => e.stopPropagation()}
       />
     </div>
   );
