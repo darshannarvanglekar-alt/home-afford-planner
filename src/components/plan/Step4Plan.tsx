@@ -240,12 +240,18 @@ export function Step4Plan({
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {plan.isUnderConstruction ? (
           <>
+            <MetricCard
+              label="Surplus (before home costs)"
+              value={formatINR(plan.surplusBeforeEmi)}
+              valueClassName={plan.surplusBeforeEmi >= 0 ? "text-success" : "text-destructive"}
+            />
             <MetricCard label="Current Monthly Outflow" value={formatINR(plan.currentMonthlyOutflow)} />
             <MetricCard label="Full EMI After Possession" value={formatINR(plan.fullEmiAfterPossession)} />
             <MetricCard
-              label="Current Surplus"
+              label="Surplus (after pre-EMI starts)"
               value={formatINR(plan.currentSurplus)}
               valueClassName={plan.currentSurplus >= 0 ? "text-success" : "text-destructive"}
+              helper="Once pre-EMI interest payments begin, this is your net monthly position."
             />
             <MetricCard
               label="Surplus After Possession"
