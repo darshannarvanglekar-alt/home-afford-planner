@@ -175,10 +175,19 @@ function InvestmentRow({
     ? ymPlusMonths(investment.monthsRemaining)
     : undefined;
 
+  const excluded = Boolean((investment as any).excludeFromCorpus);
+
   return (
     <article className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-base font-extrabold text-foreground">Investment {index + 1}</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-base font-extrabold text-foreground">Investment {index + 1}</h2>
+          {excluded && (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              Not counted in corpus
+            </span>
+          )}
+        </div>
         <Button
           type="button"
           variant="ghost"
@@ -415,10 +424,10 @@ function InvestmentRow({
                 <p className="text-sm font-semibold text-foreground">Maturity date</p>
                 <div className="mt-2">
                   <MonthYearPicker
-                    value={endDateDerived}
+                    value={investment.maturityDate ?? endDateDerived}
                     onChange={(v) => {
                       const months = monthsBetween(todayYM(), v);
-                      onUpdate({ monthsRemaining: Math.max(0, months) });
+                      onUpdate({ monthsRemaining: Math.max(0, months), maturityDate: v });
                     }}
                     ariaLabel="Maturity date"
                   />
@@ -491,6 +500,23 @@ function InvestmentRow({
             </div>
           </>
         )}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold text-foreground">
+            Include in corpus calculation
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Toggle off if this investment is earmarked for another goal
+          </p>
+        </div>
+        <Switch
+          checked={!excluded}
+          onCheckedChange={(checked) =>
+            onUpdate({ excludeFromCorpus: !checked } as any)
+          }
+        />
       </div>
     </article>
   );
