@@ -195,7 +195,9 @@ function buildUserPrompt(profile: z.infer<typeof profileSchema>) {
 Additional suggestion areas to cover when relevant:
 - If an EMI ends during the build-up window, suggest redirecting that ₹X/month into corpus from month N+1 and quantify how many months earlier the gap closes.
 - If an insurance policy matures before possession, reference the maturity arrival and how it reduces the corpus gap.
-- If annual-payment burden is significant, suggest keeping a buffer for those months when surplus drops.`;
+- If annual-payment burden is significant, suggest keeping a buffer for those months when surplus drops.
+
+PRIORITY INSTRUCTIONS: Focus your suggestions on investment-based strategies to close the corpus gap of ₹${Math.round(profile.corpusGapToFill ?? profile.corpusGap)} within ${Math.round(profile.monthsToFillGap ?? profile.monthsToPurchase)} months. The user has ₹${Math.round(profile.availableMonthlySurplus ?? Math.max(0, profile.surplus))} available monthly surplus. Suggest specific actionable routes from: Monthly Market Investment (SIP), Gold Accumulation, Recurring Deposit, Lump Sum Investment. For each suggestion provide: the route name, specific monthly ₹ amount, assumed return %, and projected corpus by possession date. Only suggest delaying purchase, reducing loan, or increasing down payment if the corpus gap absolutely cannot be closed by investing. Always reference the Corpus Builder tool for implementation.`;
 }
 
 function buildPaymentPlanContext(metrics?: z.infer<typeof paymentPlanMetricsSchema>): string {
