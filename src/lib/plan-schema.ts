@@ -490,11 +490,12 @@ export function summarizeInvestments(investments: CurrentInvestment[], monthsToT
     monthlyCommitment: investments
       .filter((item) => !isLumpSumInvestment(item.type) && item.continuing)
       .reduce((sum, item) => sum + investmentMonthlyContribution(item), 0),
-    currentCorpus: investments.reduce((sum, item) => sum + estimateInvestmentCurrentValue(item), 0),
-    projectedCorpus: investments.reduce(
-      (sum, item) => sum + projectInvestmentValue(item, monthsToTarget),
-      0,
-    ),
+    currentCorpus: investments
+      .filter((item) => !item.excludeFromCorpus)
+      .reduce((sum, item) => sum + estimateInvestmentCurrentValue(item), 0),
+    projectedCorpus: investments
+      .filter((item) => !item.excludeFromCorpus)
+      .reduce((sum, item) => sum + projectInvestmentValue(item, monthsToTarget), 0),
   };
 }
 
