@@ -424,10 +424,10 @@ function InvestmentRow({
                 <p className="text-sm font-semibold text-foreground">Maturity date</p>
                 <div className="mt-2">
                   <MonthYearPicker
-                    value={endDateDerived}
+                    value={investment.maturityDate ?? endDateDerived}
                     onChange={(v) => {
                       const months = monthsBetween(todayYM(), v);
-                      onUpdate({ monthsRemaining: Math.max(0, months) });
+                      onUpdate({ monthsRemaining: Math.max(0, months), maturityDate: v });
                     }}
                     ariaLabel="Maturity date"
                   />
