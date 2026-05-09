@@ -386,6 +386,7 @@ export const investmentSchema = z.object({
   maturityDate: z.string().regex(/^\d{4}-\d{2}$/).optional(),
   annuityMonthlyIncome: num.optional(),
   annuityStartDate: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  excludeFromCorpus: z.boolean().default(false),
 });
 export type CurrentInvestment = z.infer<typeof investmentSchema>;
 export const investmentsSchema = z.array(investmentSchema).max(10).default([]);
