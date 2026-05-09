@@ -1550,15 +1550,18 @@ function MetricCard({
   label,
   value,
   valueClassName,
+  helper,
 }: {
   label: string;
   value: string;
   valueClassName?: string;
+  helper?: string;
 }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-soft">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={cn("mt-2 text-xl font-extrabold text-foreground", valueClassName)}>{value}</p>
+      {helper ? <p className="mt-1 text-xs text-muted-foreground">{helper}</p> : null}
     </div>
   );
 }
