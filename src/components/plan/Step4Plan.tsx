@@ -464,6 +464,16 @@ function SmartSuggestionsPanel({
               (sum, e) => sum + (e && e.frequency === "annually" ? e.amount / 12 : 0),
               0,
             ),
+            availableMonthlySurplus: Math.max(0, plan.surplusBeforeEmi),
+            corpusGapToFill: Math.max(0, targetCorpus - currentInvestmentSummary.corpusAvailable),
+            monthsToFillGap: home.possessionMonth,
+            suggestionsMode: "corpus_building",
+            preferredSuggestionTypes: [
+              "redirect_expiring_emi_to_investment",
+              "increase_sip_amount",
+              "add_new_investment_route",
+              "lump_sum_from_bonus",
+            ],
           },
         }),
       });
