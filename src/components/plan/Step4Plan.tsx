@@ -240,12 +240,18 @@ export function Step4Plan({
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {plan.isUnderConstruction ? (
           <>
+            <MetricCard
+              label="Surplus (before home costs)"
+              value={formatINR(plan.surplusBeforeEmi)}
+              valueClassName={plan.surplusBeforeEmi >= 0 ? "text-success" : "text-destructive"}
+            />
             <MetricCard label="Current Monthly Outflow" value={formatINR(plan.currentMonthlyOutflow)} />
             <MetricCard label="Full EMI After Possession" value={formatINR(plan.fullEmiAfterPossession)} />
             <MetricCard
-              label="Current Surplus"
+              label="Surplus (after pre-EMI starts)"
               value={formatINR(plan.currentSurplus)}
               valueClassName={plan.currentSurplus >= 0 ? "text-success" : "text-destructive"}
+              helper="Once pre-EMI interest payments begin, this is your net monthly position."
             />
             <MetricCard
               label="Surplus After Possession"
@@ -1544,15 +1550,18 @@ function MetricCard({
   label,
   value,
   valueClassName,
+  helper,
 }: {
   label: string;
   value: string;
   valueClassName?: string;
+  helper?: string;
 }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-soft">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={cn("mt-2 text-xl font-extrabold text-foreground", valueClassName)}>{value}</p>
+      {helper ? <p className="mt-1 text-xs text-muted-foreground">{helper}</p> : null}
     </div>
   );
 }

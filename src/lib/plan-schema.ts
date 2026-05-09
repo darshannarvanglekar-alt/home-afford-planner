@@ -386,6 +386,7 @@ export const investmentSchema = z.object({
   maturityDate: z.string().regex(/^\d{4}-\d{2}$/).optional(),
   annuityMonthlyIncome: num.optional(),
   annuityStartDate: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  excludeFromCorpus: z.boolean().default(false),
 });
 export type CurrentInvestment = z.infer<typeof investmentSchema>;
 export const investmentsSchema = z.array(investmentSchema).max(10).default([]);
@@ -489,11 +490,12 @@ export function summarizeInvestments(investments: CurrentInvestment[], monthsToT
     monthlyCommitment: investments
       .filter((item) => !isLumpSumInvestment(item.type) && item.continuing)
       .reduce((sum, item) => sum + investmentMonthlyContribution(item), 0),
-    currentCorpus: investments.reduce((sum, item) => sum + estimateInvestmentCurrentValue(item), 0),
-    projectedCorpus: investments.reduce(
-      (sum, item) => sum + projectInvestmentValue(item, monthsToTarget),
-      0,
-    ),
+    currentCorpus: investments
+      .filter((item) => !item.excludeFromCorpus)
+      .reduce((sum, item) => sum + estimateInvestmentCurrentValue(item), 0),
+    projectedCorpus: investments
+      .filter((item) => !item.excludeFromCorpus)
+      .reduce((sum, item) => sum + projectInvestmentValue(item, monthsToTarget), 0),
   };
 }
 
@@ -513,6 +515,7 @@ export function summarizeInvestmentsForPossession(
   let corpusAfterPossession = 0;
 
   for (const inv of investments) {
+    if (inv.excludeFromCorpus) continue;
     // Pure protection — no corpus
     if (inv.type === "protection_plan" && insuranceIsPureProtection(inv.insuranceSubtype)) continue;
     if (insuranceIsAnnuity(inv.insuranceSubtype)) continue;
