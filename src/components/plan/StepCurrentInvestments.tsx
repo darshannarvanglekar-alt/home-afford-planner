@@ -501,6 +501,23 @@ function InvestmentRow({
           </>
         )}
       </div>
+
+      <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold text-foreground">
+            Include in corpus calculation
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Toggle off if this investment is earmarked for another goal
+          </p>
+        </div>
+        <Switch
+          checked={!excluded}
+          onCheckedChange={(checked) =>
+            onUpdate({ excludeFromCorpus: !checked } as any)
+          }
+        />
+      </div>
     </article>
   );
 }
