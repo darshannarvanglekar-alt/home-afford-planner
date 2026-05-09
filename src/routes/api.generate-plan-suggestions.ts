@@ -55,6 +55,11 @@ const profileSchema = z.object({
     .optional()
     .default([]),
   annualPaymentMonthlyEquivalent: z.number().optional().default(0),
+  availableMonthlySurplus: z.number().optional(),
+  corpusGapToFill: z.number().optional(),
+  monthsToFillGap: z.number().optional(),
+  suggestionsMode: z.string().optional(),
+  preferredSuggestionTypes: z.array(z.string()).optional().default([]),
 });
 
 const paymentPlanMetricsSchema = z.object({
