@@ -515,6 +515,7 @@ export function summarizeInvestmentsForPossession(
   let corpusAfterPossession = 0;
 
   for (const inv of investments) {
+    if (inv.excludeFromCorpus) continue;
     // Pure protection — no corpus
     if (inv.type === "protection_plan" && insuranceIsPureProtection(inv.insuranceSubtype)) continue;
     if (insuranceIsAnnuity(inv.insuranceSubtype)) continue;
