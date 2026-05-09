@@ -570,5 +570,6 @@ function newInvestment(): CurrentInvestment {
     monthsRunning: 0,
     continuing: true,
     monthsRemaining: 12,
+    excludeFromCorpus: false,
   };
 }
