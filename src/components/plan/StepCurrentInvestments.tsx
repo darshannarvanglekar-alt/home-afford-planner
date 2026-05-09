@@ -175,10 +175,19 @@ function InvestmentRow({
     ? ymPlusMonths(investment.monthsRemaining)
     : undefined;
 
+  const excluded = Boolean((investment as any).excludeFromCorpus);
+
   return (
     <article className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-base font-extrabold text-foreground">Investment {index + 1}</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-base font-extrabold text-foreground">Investment {index + 1}</h2>
+          {excluded && (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              Not counted in corpus
+            </span>
+          )}
+        </div>
         <Button
           type="button"
           variant="ghost"
